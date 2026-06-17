@@ -77,18 +77,6 @@ FEATURE_TESTS = [
     },
 ]
 FEATURE_BY_MOTOR = {int(feature["motor"]): feature for feature in FEATURE_TESTS}
-REFERENCE_GLOVE_KEYS_BY_MOTOR = {
-    0: "thumb_2",
-    1: "thumb_1",
-    2: "index_2",
-    3: "middle_2",
-    4: "ring_2",
-    5: "pinky_2",
-    6: "index_1",
-    7: "ring_1",
-    8: "pinky_1",
-}
-DISABLED_REFERENCE_MOTORS = {9}
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -238,18 +226,6 @@ def patch_channel(
     data["metadata"] = metadata
 
 
-def disable_channel(data: dict[str, Any], motor_index: int, fixed_value: int = 255) -> None:
-    """Mark a YAML channel disabled and hold it at a fixed L10 value."""
-
-    channel = find_channel(data, motor_index)
-    channel["enabled"] = False
-    channel["fixed_value"] = fixed_value
-    metadata = dict(data.get("metadata", {}))
-    metadata["last_disabled_motor"] = motor_index
-    metadata["last_disabled_fixed_value"] = fixed_value
-    data["metadata"] = metadata
-
-
 def select_glove_key(
     args: argparse.Namespace,
     *,
@@ -275,14 +251,6 @@ def select_glove_key(
         if answer in SOURCE_SENSOR_INDEX_BY_KEY:
             return answer
         print(f"Unknown glove_key {answer!r}. Example keys: index_0, pinky_0, thumb_2.")
-
-
-def default_key_for_motor(motor_index: int | None, ranked: list[tuple[str, float]]) -> str:
-    """Prefer the user-guided reference key, then fall back to strongest delta."""
-
-    if motor_index in REFERENCE_GLOVE_KEYS_BY_MOTOR:
-        return REFERENCE_GLOVE_KEYS_BY_MOTOR[int(motor_index)]
-    return ranked[0][0]
 
 
 def build_reader(args: argparse.Namespace, data: Mapping[str, Any]) -> GloveReader:
@@ -344,13 +312,6 @@ def run_all_features(args: argparse.Namespace, data: dict[str, Any], frame_iter:
         print(f"L10 motor {motor_index}: {label}")
         print("=" * 72)
 
-        if motor_index in DISABLED_REFERENCE_MOTORS:
-            print("Reference mapping disables this L10 motor; no glove_key will be used.")
-            if not args.no_write:
-                disable_channel(output_data, motor_index)
-                save_yaml(args.config, output_data)
-            continue
-
         open_frame, moved_frame, ranked = capture_feature_pair(
             args,
             frame_iter,
@@ -359,10 +320,7 @@ def run_all_features(args: argparse.Namespace, data: dict[str, Any], frame_iter:
         )
         print_probe_table(open_frame, moved_frame, ranked, args.top)
 
-        default_key = default_key_for_motor(motor_index, ranked)
-        if default_key != ranked[0][0]:
-            print(f"\nReference glove_key for motor {motor_index}: {default_key}")
-            print(f"Strongest moved sensor was: {ranked[0][0]}")
+        default_key = ranked[0][0]
         selected_key = select_glove_key(args, motor_index=motor_index, default_key=default_key)
         print_copy_block(
             motor_index=motor_index,
@@ -429,14 +387,6 @@ def main() -> None:
     if args.all_features:
         run_all_features(args, data, frame_iter)
         return
-    if args.motor in DISABLED_REFERENCE_MOTORS and args.glove_key is None:
-        if args.no_write:
-            print(f"Motor {args.motor} is disabled by the reference mapping; YAML was not changed.")
-            return
-        output_data = load_yaml(args.config) if args.config.exists() else data
-        disable_channel(output_data, args.motor)
-        save_yaml(args.config, output_data)
-        return
 
     open_frame, moved_frame, ranked = capture_feature_pair(
         args,
@@ -446,14 +396,10 @@ def main() -> None:
     )
     print_probe_table(open_frame, moved_frame, ranked, args.top)
 
-    default_key = default_key_for_motor(args.motor, ranked)
-    if default_key != ranked[0][0]:
-        print(f"\nReference glove_key for motor {args.motor}: {default_key}")
-        print(f"Strongest moved sensor was: {ranked[0][0]}")
-    selected_key = select_glove_key(args, motor_index=args.motor, default_key=default_key)
+    selected_key = select_glove_key(args, motor_index=args.motor, default_key=ranked[0][0])
     print_copy_block(
         motor_index=args.motor,
-        glove_key=selected_key or default_key,
+        glove_key=selected_key or ranked[0][0],
         open_frame=open_frame,
         moved_frame=moved_frame,
     )
