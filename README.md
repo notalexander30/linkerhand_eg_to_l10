@@ -309,6 +309,24 @@ If you already know the correct glove key, force it:
 python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motor 2 --label index --glove-key index_0
 ```
 
+Probe all 10 L10 features one by one:
+
+```bash
+python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --all-features
+```
+
+For each feature, it prints the ranked EG glove sensors and asks which `glove_key` to write. Press Enter to accept the strongest sensor, type a different key like `index_0`, or type `skip`. To only collect values and send them back here:
+
+```bash
+python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --all-features --no-write
+```
+
+Probe only the index/pinky-related L10 features:
+
+```bash
+python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --all-features --motors 2 5 6 8
+```
+
 ### Smoother Motion
 
 The YAML controller supports `smoothing_mode: one_euro`, based on the [1 Euro Filter](https://gery.casiez.net/1euro/) for reducing jitter while keeping fast human motion responsive.

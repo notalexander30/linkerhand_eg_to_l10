@@ -24,6 +24,59 @@ from control_l10_left_from_eg_glove import GloveReader, SERIAL_SENSOR_KEYS  # no
 DEFAULT_CONFIG = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.auto.yaml"
 DEFAULT_FALLBACK_CONFIG = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.yaml"
 SOURCE_SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
+FEATURE_TESTS = [
+    {
+        "motor": 0,
+        "label": "thumb CMC pitch",
+        "prompt": "Bend only the RIGHT thumb base pitch from open toward closed.",
+    },
+    {
+        "motor": 1,
+        "label": "thumb adduction/abduction",
+        "prompt": "Move only the RIGHT thumb side-to-side / away-toward palm.",
+    },
+    {
+        "motor": 2,
+        "label": "index MCP pitch",
+        "prompt": "Bend only the RIGHT index main knuckle open/close.",
+    },
+    {
+        "motor": 3,
+        "label": "middle MCP pitch",
+        "prompt": "Bend only the RIGHT middle main knuckle open/close.",
+    },
+    {
+        "motor": 4,
+        "label": "ring MCP pitch",
+        "prompt": "Bend only the RIGHT ring main knuckle open/close.",
+    },
+    {
+        "motor": 5,
+        "label": "pinky MCP pitch",
+        "prompt": "Bend only the RIGHT pinky main knuckle open/close.",
+    },
+    {
+        "motor": 6,
+        "label": "index adduction/abduction",
+        "prompt": "Move only the RIGHT index side-swing / spread motion.",
+    },
+    {
+        "motor": 7,
+        "label": "ring adduction/abduction",
+        "prompt": "Move only the RIGHT ring side-swing / spread motion.",
+    },
+    {
+        "motor": 8,
+        "label": "pinky adduction/abduction",
+        "prompt": "Move only the RIGHT pinky side-swing / spread motion.",
+    },
+    {
+        "motor": 9,
+        "label": "thumb rotation",
+        "prompt": "Rotate / oppose only the RIGHT thumb across the palm.",
+    },
+]
+FEATURE_BY_MOTOR = {int(feature["motor"]): feature for feature in FEATURE_TESTS}
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -116,6 +169,23 @@ def print_probe_table(
         )
 
 
+def print_copy_block(
+    *,
+    motor_index: int | None,
+    glove_key: str,
+    open_frame: Mapping[str, float],
+    moved_frame: Mapping[str, float],
+) -> None:
+    """Print a small block the user can paste back into chat."""
+
+    print("\nCopy this back to Codex if you want me to verify it:")
+    print(f"motor={motor_index}")
+    print(f"best_glove_key={glove_key}")
+    print(f"source_sensor_index={SOURCE_SENSOR_INDEX_BY_KEY[glove_key]}")
+    print(f"glove_open={open_frame[glove_key]:.5f}")
+    print(f"glove_closed={moved_frame[glove_key]:.5f}")
+
+
 def find_channel(data: Mapping[str, Any], motor_index: int) -> dict[str, Any]:
     """Find the YAML channel for a target L10 motor index."""
 
@@ -156,6 +226,33 @@ def patch_channel(
     data["metadata"] = metadata
 
 
+def select_glove_key(
+    args: argparse.Namespace,
+    *,
+    motor_index: int | None,
+    default_key: str,
+) -> str | None:
+    """Choose the glove key to write, with an optional manual override."""
+
+    if args.glove_key is not None:
+        return args.glove_key
+    if args.no_write or args.auto_select or args.non_interactive:
+        return default_key
+
+    while True:
+        answer = input(
+            f"Use glove_key for motor {motor_index} "
+            f"[{default_key}]? Enter=accept, type key, or 'skip': "
+        ).strip()
+        if not answer:
+            return default_key
+        if answer.lower() in {"skip", "s"}:
+            return None
+        if answer in SOURCE_SENSOR_INDEX_BY_KEY:
+            return answer
+        print(f"Unknown glove_key {answer!r}. Example keys: index_0, pinky_0, thumb_2.")
+
+
 def build_reader(args: argparse.Namespace, data: Mapping[str, Any]) -> GloveReader:
     """Create the EG glove reader from CLI values and YAML defaults."""
 
@@ -166,12 +263,91 @@ def build_reader(args: argparse.Namespace, data: Mapping[str, Any]) -> GloveRead
     return GloveReader(mock=args.mock_glove, settings=settings)
 
 
+def capture_feature_pair(
+    args: argparse.Namespace,
+    frame_iter: Iterator[dict[str, float]],
+    *,
+    label: str,
+    move_prompt: str,
+) -> tuple[dict[str, float], dict[str, float], list[tuple[str, float]]]:
+    """Capture one open pose and one moved pose for a feature."""
+
+    wait_for_enter(f"\nOpen your RIGHT glove hand fully for {label}.", skip=args.non_interactive)
+    time.sleep(max(0.0, args.settle))
+    open_frame = median_frame(frame_iter, list(SERIAL_SENSOR_KEYS), args.samples)
+
+    wait_for_enter(f"\n{move_prompt}\nHold still.", skip=args.non_interactive)
+    time.sleep(max(0.0, args.settle))
+    moved_frame = median_frame(frame_iter, list(SERIAL_SENSOR_KEYS), args.samples)
+
+    ranked = rank_sensor_deltas(open_frame, moved_frame)
+    if not ranked:
+        raise SystemExit("No glove sensor data was captured.")
+    return open_frame, moved_frame, ranked
+
+
+def selected_feature_tests(args: argparse.Namespace) -> list[dict[str, Any]]:
+    """Return the feature tests requested by --all-features/--motors."""
+
+    if args.motors is None:
+        return list(FEATURE_TESTS)
+
+    tests = []
+    for motor_index in args.motors:
+        if motor_index not in FEATURE_BY_MOTOR:
+            raise SystemExit(f"Unknown L10 motor for feature probing: {motor_index}")
+        tests.append(FEATURE_BY_MOTOR[motor_index])
+    return tests
+
+
+def run_all_features(args: argparse.Namespace, data: dict[str, Any], frame_iter: Iterator[dict[str, float]]) -> None:
+    """Run a guided open/moved capture for each L10 feature."""
+
+    output_data = load_yaml(args.config) if args.config.exists() else data
+    for feature in selected_feature_tests(args):
+        motor_index = int(feature["motor"])
+        label = str(feature["label"])
+        prompt = str(feature["prompt"])
+        print("\n" + "=" * 72)
+        print(f"L10 motor {motor_index}: {label}")
+        print("=" * 72)
+
+        open_frame, moved_frame, ranked = capture_feature_pair(
+            args,
+            frame_iter,
+            label=label,
+            move_prompt=prompt,
+        )
+        print_probe_table(open_frame, moved_frame, ranked, args.top)
+
+        default_key = ranked[0][0]
+        selected_key = select_glove_key(args, motor_index=motor_index, default_key=default_key)
+        print_copy_block(
+            motor_index=motor_index,
+            glove_key=selected_key or default_key,
+            open_frame=open_frame,
+            moved_frame=moved_frame,
+        )
+
+        if args.no_write:
+            print("\nYAML was not changed for this feature.")
+            continue
+        if selected_key is None:
+            print("\nSkipped YAML update for this feature.")
+            continue
+
+        patch_channel(output_data, motor_index, selected_key, open_frame[selected_key], moved_frame[selected_key], ranked)
+        save_yaml(args.config, output_data)
+
+
 def build_parser() -> argparse.ArgumentParser:
     """CLI for probing one glove open/moved keypoint pair."""
 
     parser = argparse.ArgumentParser(description="Probe EG glove keypoints and optionally patch one L10 YAML motor.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="YAML mapping to update.")
     parser.add_argument("--motor", type=int, default=None, help="L10 motor index to patch with the strongest sensor.")
+    parser.add_argument("--all-features", action="store_true", help="Probe all 10 L10 features one-by-one.")
+    parser.add_argument("--motors", nargs="+", type=int, default=None, help="With --all-features, probe only these motors.")
     parser.add_argument("--glove-key", default=None, help="Force this glove_key instead of the strongest moved sensor.")
     parser.add_argument("--label", default="target finger", help="Text shown in prompts, for example index or pinky.")
     parser.add_argument("--glove-port", default="/dev/ttyUSB0", help="USB serial port for the EG glove.")
@@ -180,6 +356,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--settle", type=float, default=0.4, help="Seconds to wait after each prompt.")
     parser.add_argument("--top", type=int, default=6, help="How many strongest sensor candidates to print.")
     parser.add_argument("--no-write", action="store_true", help="Only print captured values; do not patch YAML.")
+    parser.add_argument("--auto-select", action="store_true", help="Write the strongest sensor without asking for confirmation.")
     parser.add_argument("--mock-glove", action="store_true", help="Use generated glove values for testing.")
     parser.add_argument("--non-interactive", action="store_true", help="Skip Enter prompts.")
     return parser
@@ -189,6 +366,12 @@ def main() -> None:
     """Capture open/moved keypoints, print candidates, and optionally patch YAML."""
 
     args = build_parser().parse_args()
+    if args.all_features and args.motor is not None:
+        raise SystemExit("Use either --all-features or --motor, not both.")
+    if args.motors is not None and not args.all_features:
+        raise SystemExit("--motors is only valid with --all-features.")
+    if args.glove_key is not None and args.all_features:
+        raise SystemExit("--glove-key is only valid for one --motor probe.")
     if args.samples < 1:
         raise SystemExit("--samples must be at least 1.")
     if args.top < 1:
@@ -201,29 +384,31 @@ def main() -> None:
     reader = build_reader(args, data)
     frame_iter = reader.frames()
 
-    wait_for_enter(f"\nOpen your RIGHT glove hand fully for {args.label}.", skip=args.non_interactive)
-    time.sleep(max(0.0, args.settle))
-    open_frame = median_frame(frame_iter, list(SERIAL_SENSOR_KEYS), args.samples)
+    if args.all_features:
+        run_all_features(args, data, frame_iter)
+        return
 
-    wait_for_enter(f"\nMove/close only the RIGHT glove {args.label} and hold still.", skip=args.non_interactive)
-    time.sleep(max(0.0, args.settle))
-    moved_frame = median_frame(frame_iter, list(SERIAL_SENSOR_KEYS), args.samples)
-
-    ranked = rank_sensor_deltas(open_frame, moved_frame)
-    if not ranked:
-        raise SystemExit("No glove sensor data was captured.")
+    open_frame, moved_frame, ranked = capture_feature_pair(
+        args,
+        frame_iter,
+        label=args.label,
+        move_prompt=f"Move/close only the RIGHT glove {args.label}",
+    )
     print_probe_table(open_frame, moved_frame, ranked, args.top)
 
-    selected_key = args.glove_key or ranked[0][0]
-    print("\nCopy this back to Codex if you want me to verify it:")
-    print(f"motor={args.motor}")
-    print(f"best_glove_key={selected_key}")
-    print(f"source_sensor_index={SOURCE_SENSOR_INDEX_BY_KEY[selected_key]}")
-    print(f"glove_open={open_frame[selected_key]:.5f}")
-    print(f"glove_closed={moved_frame[selected_key]:.5f}")
+    selected_key = select_glove_key(args, motor_index=args.motor, default_key=ranked[0][0])
+    print_copy_block(
+        motor_index=args.motor,
+        glove_key=selected_key or ranked[0][0],
+        open_frame=open_frame,
+        moved_frame=moved_frame,
+    )
 
     if args.motor is None or args.no_write:
         print("\nYAML was not changed.")
+        return
+    if selected_key is None:
+        print("\nSkipped YAML update.")
         return
 
     output_data = load_yaml(args.config) if args.config.exists() else data
