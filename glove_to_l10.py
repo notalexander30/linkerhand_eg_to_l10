@@ -38,16 +38,14 @@ ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 FINGER_GROUPS = {
     "thumb": [0, 1, 2],
-    # This right-hand glove reports the outside fingers in the opposite order:
-    # raw sensors 3..5 are little/pinky, and raw sensors 12..14 are index.
-    "index": [12, 13, 14],
+    "index": [3, 4, 5],
     "middle": [6, 7, 8],
     "ring": [9, 10, 11],
-    "little": [3, 4, 5],
+    "little": [12, 13, 14],
 }
 
 POSE_GROUPS = {
-    "thumb": [0, 1],
+    "thumb": [0, 1, 9],
     "index": [2],
     "middle": [3],
     "ring": [4],
@@ -57,19 +55,19 @@ POSE_GROUPS = {
 FINGER_NAMES = ["index", "middle", "ring", "little"]
 
 ANGLE_SENSOR_TO_L10_JOINT = {
-    2: 0,   # right glove thumb sensor 2 -> left L10 Thumb CMC Pitch
+    0: 0,   # right glove thumb sensor 0 -> left L10 Thumb CMC Pitch
     1: 1,   # right glove thumb sensor 1 -> left L10 Thumb Adduction/Abduction
-    14: 2,  # right glove index sensor 2 -> left L10 Index Finger MCP Pitch
-    8: 3,   # right glove middle sensor 2 -> left L10 Middle Finger MCP Pitch
-    11: 4,  # right glove ring sensor 2 -> left L10 Ring Finger MCP Pitch
-    5: 5,   # right glove little/pinky sensor 2 -> left L10 Pinky Finger MCP Pitch
-    12: 6,  # right glove index sensor 0 -> left L10 Index Finger Adduction/Abduction
-    9: 7,   # right glove ring sensor 0 -> left L10 Ring Finger Adduction/Abduction
-    3: 8,   # right glove little/pinky sensor 0 -> left L10 Pinky Finger Adduction/Abduction
-    0: 9,   # right glove thumb sensor 0 -> left L10 Thumb Rotation
+    2: 9,   # right glove thumb sensor 2 -> left L10 Thumb Rotation
+    3: 2,   # right glove index sensor 0 -> left L10 Index Finger MCP Pitch
+    4: 6,   # right glove index sensor 1 -> left L10 Index Finger Adduction/Abduction
+    6: 3,   # right glove middle sensor 0 -> left L10 Middle Finger MCP Pitch
+    9: 4,   # right glove ring sensor 0 -> left L10 Ring Finger MCP Pitch
+    10: 7,  # right glove ring sensor 1 -> left L10 Ring Finger Adduction/Abduction
+    12: 5,  # right glove little sensor 0 -> left L10 Pinky Finger MCP Pitch
+    13: 8,  # right glove little sensor 1 -> left L10 Pinky Finger Adduction/Abduction
 }
 
-IGNORED_GLOVE_SENSORS = [4, 6, 7, 10, 13]
+IGNORED_GLOVE_SENSORS = [5, 7, 8, 11, 14]
 
 
 def strip_ansi(text: str) -> str:
@@ -226,7 +224,7 @@ def joint_value(joint: int, amount: float) -> int:
 
 
 def pose_from_angle_map(frame: dict[int, float], angle_max: float = ANGLE_MAX) -> tuple[dict[str, float], list[int]]:
-    pose = list(OPEN_POSE)
+    pose = [0] * 10
     mapped: dict[str, float] = {}
     for sensor_index, joint_index in ANGLE_SENSOR_TO_L10_JOINT.items():
         angle = frame.get(sensor_index, 0.0)
@@ -289,9 +287,9 @@ def pose_from_glove(frame: dict[int, float], open_angles: dict, fist_angles: dic
         thumb_side = flex.get("thumb", 0.0)
         thumb_rotation = flex.get("thumb", 0.0)
     else:
-        thumb_base = sensor_amounts.get(2, flex.get("thumb", 0.0))
+        thumb_base = sensor_amounts.get(0, flex.get("thumb", 0.0))
         thumb_side = sensor_amounts.get(1, flex.get("thumb", 0.0))
-        thumb_rotation = sensor_amounts.get(0, flex.get("thumb", 0.0))
+        thumb_rotation = sensor_amounts.get(2, flex.get("thumb", 0.0))
 
     thumb_base = gain_amount(thumb_base, args.thumb_gain)
     thumb_side = gain_amount(thumb_side, args.thumb_gain)

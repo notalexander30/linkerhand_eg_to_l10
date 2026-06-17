@@ -31,7 +31,6 @@ from control_l10_left_from_eg_glove import (  # noqa: E402
     DEFAULT_CAN,
     DEFAULT_CONFIG,
     L10_JOINT_NAMES,
-    SERIAL_SENSOR_KEYS,
     GloveReader,
     TeleopConfig,
     clamp_int,
@@ -43,9 +42,25 @@ from control_l10_left_from_eg_glove import (  # noqa: E402
 DEFAULT_OUTPUT = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.auto.yaml"
 ALL_255_OPEN_POSE = [255] * 10
 
-SENSOR_KEYS = list(SERIAL_SENSOR_KEYS)
+SENSOR_KEYS = [
+    "thumb_0",
+    "thumb_1",
+    "thumb_2",
+    "index_0",
+    "index_1",
+    "index_2",
+    "middle_0",
+    "middle_1",
+    "middle_2",
+    "ring_0",
+    "ring_1",
+    "ring_2",
+    "pinky_0",
+    "pinky_1",
+    "pinky_2",
+]
 
-SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
+SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SENSOR_KEYS)}
 
 MOTOR_NAMES = {index: name for index, name in enumerate(L10_JOINT_NAMES)}
 

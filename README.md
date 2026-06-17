@@ -255,8 +255,6 @@ Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, s
 
 To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
 
-For this right-hand glove, the outside finger serial order is corrected in code: raw sensors `3..5` are treated as pinky, and raw sensors `12..14` are treated as index. The current reference map is anatomical: pitch motors use each finger's `_2` sensor, side-swing motors use `_0`, and thumb rotation uses `thumb_0`.
-
 ### Auto-Match The 15 Glove Sensors To 10 L10 Motors
 
 If the glove sensor order does not match the L10 motor order, run the interactive matcher:
@@ -286,46 +284,6 @@ python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapp
 Each channel has a `gain` value, which is the master-to-slave movement multiplier. Use `gain: 1.0` for normal open-to-closed mapping, increase it if the L10 does not close enough, and decrease it if it moves too far.
 
 If one glove sensor should drive more than one L10 motor, add `--allow-duplicate-sensors` during calibration.
-
-### Quick Probe One Finger
-
-Use this when you only want to capture glove values first and immediately patch one YAML motor. It does not move the L10 hand.
-
-Probe L10 index bend motor `2`:
-
-```bash
-python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motor 2 --label index
-```
-
-The script asks for glove-open, then asks you to move only that finger. It prints all 15 glove sensor values, suggests the current reference key when known, and writes that `glove_key`, `glove_open`, and `glove_closed` into the YAML. If you only want to print values to send back here:
-
-```bash
-python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motor 2 --label index --no-write
-```
-
-If you already know the correct glove key, force it:
-
-```bash
-python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motor 2 --label index --glove-key index_2
-```
-
-Probe all 10 L10 features one by one:
-
-```bash
-python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --all-features
-```
-
-For each feature, it prints the ranked EG glove sensors and asks which `glove_key` to write. Press Enter to accept the current reference key, type a different key like `index_0`, or type `skip`. To only collect values and send them back here:
-
-```bash
-python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --all-features --no-write
-```
-
-Probe only the index/pinky-related L10 features:
-
-```bash
-python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --all-features --motors 2 5 6 8
-```
 
 ### Smoother Motion
 
@@ -371,21 +329,6 @@ If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show the
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
 ```
 
-That command also applies the current reference glove keys:
-
-```text
-motor 0 Thumb CMC Pitch                  -> thumb_2
-motor 1 Thumb Adduction/Abduction        -> thumb_1
-motor 2 Index Finger MCP Pitch           -> index_2
-motor 3 Middle Finger MCP Pitch          -> middle_2
-motor 4 Ring Finger MCP Pitch            -> ring_2
-motor 5 Pinky Finger MCP Pitch           -> pinky_2
-motor 6 Index Finger Adduction/Abduction -> index_0
-motor 7 Ring Finger Adduction/Abduction  -> ring_0
-motor 8 Pinky Finger Adduction/Abduction -> pinky_0
-motor 9 Thumb Rotation                   -> thumb_0
-```
-
 For faster live streaming instead of one-second set-state snapshots:
 
 ```bash
@@ -412,11 +355,7 @@ For only the index finger ranges:
 python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motors 2 6
 ```
 
-Thumb rotation is enabled by default from `thumb_0` when you run `update_motion_controls.py`. If it causes trouble, hold motor `9` fixed with:
-
-```bash
-python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --disable-thumb-rotation
-```
+Thumb Rotation is disabled by default when you run `update_motion_controls.py`; motor `9` is held at `255` with `enabled: false` and `fixed_value: 255`.
 
 ## GUI Control
 
@@ -454,45 +393,25 @@ Default mapping is raw angle mapping:
 360 degrees -> L10 position 255
 ```
 
-Raw EG glove sensor names used in YAML:
-
-```text
-raw 0  = thumb_0
-raw 1  = thumb_1
-raw 2  = thumb_2
-raw 3  = pinky_0
-raw 4  = pinky_1
-raw 5  = pinky_2
-raw 6  = middle_0
-raw 7  = middle_1
-raw 8  = middle_2
-raw 9  = ring_0
-raw 10 = ring_1
-raw 11 = ring_2
-raw 12 = index_0
-raw 13 = index_1
-raw 14 = index_2
-```
-
 Right glove sensors mapped to left L10 joints:
 
 ```text
-glove 0  -> L10 joint 9 Thumb Rotation
+glove 0  -> L10 joint 0 Thumb CMC Pitch
 glove 1  -> L10 joint 1 Thumb Adduction/Abduction
-glove 2  -> L10 joint 0 Thumb CMC Pitch
-glove 3  -> L10 joint 8 Pinky Finger Adduction/Abduction
-glove 5  -> L10 joint 5 Pinky Finger MCP Pitch
-glove 8  -> L10 joint 3 Middle Finger MCP Pitch
-glove 9  -> L10 joint 7 Ring Finger Adduction/Abduction
-glove 11 -> L10 joint 4 Ring Finger MCP Pitch
-glove 12 -> L10 joint 6 Index Finger Adduction/Abduction
-glove 14 -> L10 joint 2 Index Finger MCP Pitch
+glove 2  -> L10 joint 9 Thumb Rotation
+glove 3  -> L10 joint 2 Index Finger MCP Pitch
+glove 4  -> L10 joint 6 Index Finger Adduction/Abduction
+glove 6  -> L10 joint 3 Middle Finger MCP Pitch
+glove 9  -> L10 joint 4 Ring Finger MCP Pitch
+glove 10 -> L10 joint 7 Ring Finger Adduction/Abduction
+glove 12 -> L10 joint 5 Pinky Finger MCP Pitch
+glove 13 -> L10 joint 8 Pinky Finger Adduction/Abduction
 ```
 
 Ignored glove sensors:
 
 ```text
-4, 6, 7, 10, 13
+5, 7, 8, 11, 14
 ```
 
 L10 joint order:
