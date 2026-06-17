@@ -1,0 +1,7 @@
+python-can
+python-can-candle
+pyserial
+PyYAML
+numpy
+tabulate
+PyQt5
