@@ -15,13 +15,17 @@ from control_l10_left_from_eg_glove import L10_JOINT_NAMES, SERIAL_SENSOR_KEYS
 
 
 DEFAULT_CONFIG = Path("config/l10_left_eg_glove_mapping.auto.yaml")
-SWAPPED_INDEX_PINKY_KEYS_BY_MOTOR = {
-    # The L10 SDK keeps index at motor 2/6 and pinky at 5/8. This table only
-    # swaps which glove channels feed those L10 motors.
-    2: "pinky_0",
-    5: "index_0",
-    6: "pinky_1",
-    8: "index_1",
+CANONICAL_GLOVE_KEYS_BY_MOTOR = {
+    0: "thumb_0",
+    1: "thumb_1",
+    2: "index_0",
+    3: "middle_0",
+    4: "ring_0",
+    5: "pinky_0",
+    6: "index_1",
+    7: "ring_1",
+    8: "pinky_1",
+    9: "thumb_2",
 }
 SOURCE_SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
 
@@ -49,7 +53,7 @@ def save_yaml(path: Path, data: dict[str, Any]) -> None:
 
 
 def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
-    """Set speed/smoothing fields and optionally swap index/pinky glove channels."""
+    """Set speed/smoothing fields and optionally repair canonical glove keys."""
 
     data["control_hz"] = args.control_hz
     data["hand_output_mode"] = args.hand_output_mode
@@ -68,8 +72,8 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
         motor_index = int(channel.get("motor_index", -1))
         if 0 <= motor_index < len(L10_JOINT_NAMES):
             channel["l10_joint_name"] = L10_JOINT_NAMES[motor_index]
-        if args.swap_index_pinky and motor_index in SWAPPED_INDEX_PINKY_KEYS_BY_MOTOR:
-            glove_key = SWAPPED_INDEX_PINKY_KEYS_BY_MOTOR[motor_index]
+        if args.canonical_glove_keys and motor_index in CANONICAL_GLOVE_KEYS_BY_MOTOR:
+            glove_key = CANONICAL_GLOVE_KEYS_BY_MOTOR[motor_index]
             channel["glove_key"] = glove_key
             channel["source_sensor_index"] = SOURCE_SENSOR_INDEX_BY_KEY.get(glove_key)
         if args.disable_thumb_rotation and motor_index == 9:
@@ -107,10 +111,10 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pose-deadband", type=int, default=0, help="0 gives most 1:1 response.")
     parser.add_argument("--max-delta-per-cycle", type=int, default=0, help="0 means no speed cap.")
     parser.add_argument(
-        "--no-swap-index-pinky",
-        dest="swap_index_pinky",
+        "--keep-glove-keys",
+        dest="canonical_glove_keys",
         action="store_false",
-        help="Keep existing index/pinky glove keys instead of applying the swapped mapping.",
+        help="Keep existing glove_key values instead of repairing the canonical L10 map.",
     )
     parser.add_argument(
         "--enable-thumb-rotation",
@@ -119,7 +123,7 @@ def build_parser() -> argparse.ArgumentParser:
         help="Do not disable motor 9 thumb rotation.",
     )
     parser.add_argument("--thumb-rotation-fixed-value", type=int, default=255, help="Fixed value for disabled thumb rotation.")
-    parser.set_defaults(disable_thumb_rotation=True, swap_index_pinky=True)
+    parser.set_defaults(disable_thumb_rotation=True, canonical_glove_keys=True)
     return parser
 
 

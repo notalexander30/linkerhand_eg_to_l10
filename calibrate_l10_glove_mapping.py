@@ -31,6 +31,7 @@ from control_l10_left_from_eg_glove import (  # noqa: E402
     DEFAULT_CAN,
     DEFAULT_CONFIG,
     L10_JOINT_NAMES,
+    SERIAL_SENSOR_KEYS,
     GloveReader,
     TeleopConfig,
     clamp_int,
@@ -60,7 +61,7 @@ SENSOR_KEYS = [
     "pinky_2",
 ]
 
-SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SENSOR_KEYS)}
+SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
 
 MOTOR_NAMES = {index: name for index, name in enumerate(L10_JOINT_NAMES)}
 

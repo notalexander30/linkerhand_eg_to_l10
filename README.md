@@ -255,7 +255,7 @@ Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, s
 
 To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
 
-The LinkerHand SDK examples in `LinkerHand/config/L10_positions.yaml` confirm that L10 motor `2` is Index Bend and motor `5` is Little/Pinky. This bridge keeps that SDK order and swaps only the glove channels for index/pinky: L10 index uses `pinky_0`/`pinky_1`, and L10 pinky uses `index_0`/`index_1`.
+For this right-hand glove, the outside finger serial order is corrected in code: raw sensors `3..5` are treated as pinky, and raw sensors `12..14` are treated as index. Keep the YAML anatomical, so L10 motor `2` uses `index_0` and motor `5` uses `pinky_0`.
 
 ### Auto-Match The 15 Glove Sensors To 10 L10 Motors
 
@@ -331,7 +331,7 @@ If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show the
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
 ```
 
-That command also repairs the index/pinky glove-key swap in an existing auto YAML.
+That command also repairs the canonical glove keys, including index/pinky: motor `2` -> `index_0`, motor `5` -> `pinky_0`, motor `6` -> `index_1`, and motor `8` -> `pinky_1`.
 
 For faster live streaming instead of one-second set-state snapshots:
 
@@ -353,10 +353,10 @@ Re-capture only the open/closed glove ranges without remapping sensors:
 python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0
 ```
 
-For only the swapped index/pinky ranges:
+For only the index finger ranges:
 
 ```bash
-python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motors 2 5 6 8
+python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motors 2 6
 ```
 
 Thumb Rotation is disabled by default when you run `update_motion_controls.py`; motor `9` is held at `255` with `enabled: false` and `fixed_value: 255`.
@@ -403,13 +403,13 @@ Right glove sensors mapped to left L10 joints:
 glove 0  -> L10 joint 0 Thumb CMC Pitch
 glove 1  -> L10 joint 1 Thumb Adduction/Abduction
 glove 2  -> L10 joint 9 Thumb Rotation
-glove 3  -> L10 joint 5 Pinky Finger MCP Pitch
-glove 4  -> L10 joint 8 Pinky Finger Adduction/Abduction
+glove 3  -> L10 joint 2 Index Finger MCP Pitch
+glove 4  -> L10 joint 6 Index Finger Adduction/Abduction
 glove 6  -> L10 joint 3 Middle Finger MCP Pitch
 glove 9  -> L10 joint 4 Ring Finger MCP Pitch
 glove 10 -> L10 joint 7 Ring Finger Adduction/Abduction
-glove 12 -> L10 joint 2 Index Finger MCP Pitch
-glove 13 -> L10 joint 6 Index Finger Adduction/Abduction
+glove 12 -> L10 joint 5 Pinky Finger MCP Pitch
+glove 13 -> L10 joint 8 Pinky Finger Adduction/Abduction
 ```
 
 Ignored glove sensors:
