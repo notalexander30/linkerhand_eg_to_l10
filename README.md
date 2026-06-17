@@ -1,42 +1,194 @@
 # LinkerHand EG To L10
 
-Separate control repo for a right EG/KTH5702 USB glove controlling a left LinkerHand L10.
+Terminal and GUI control for using a right EG/KTH5702 USB glove to control a left LinkerHand L10 on a Linux laptop.
 
 ```text
 Right EG glove -> USB serial -> laptop -> SocketCAN can0 -> left LinkerHand L10
 ```
 
-## Setup
+This project uses the LinkerHand Python SDK path for the hand:
+
+- `LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")`
+- `api.get_embedded_version()`
+- `api.get_state()`
+- `api.finger_move(pose=...)`
+
+The glove is read from USB serial, usually `/dev/ttyUSB0`.
+
+## Safety First
+
+- Mount or hold the L10 securely before sending movement.
+- Keep fingers, tools, and cables away from the hand while testing.
+- Run only one controller at a time. Close ROS nodes, GUI dashboards, old terminal scripts, and other LinkerHand tools before using this bridge.
+- Test the glove with `--raw` first.
+- Preview without `--send` before live control.
+- If motion is unsafe, press `Ctrl+C`, press `Stop` in the GUI, or use the hardware power switch/emergency stop.
+- Do not use `--force` unless you understand and accept the risk.
+
+## What You Need
+
+- Ubuntu 20.04 or newer is recommended.
+- Python 3.8 or newer.
+- Git.
+- A right EG/KTH5702 glove connected by USB-C/USB.
+- A USB-to-CAN adapter supported by SocketCAN.
+- A powered LinkerHand L10.
+- Linux CAN tools: `iproute2`, `can-utils`, and optionally `ethtool`.
+- Optional but recommended: Conda or another Python virtual environment.
+
+## First Setup On A Linux Laptop
+
+### 1. Clone the project
 
 ```bash
 cd ~
 git clone https://github.com/notalexander30/linkerhand_eg_to_l10.git
 cd linkerhand_eg_to_l10
-conda activate linkerhand-l10
-python3 -m pip install -r requirements.txt
-sudo apt update
-sudo apt install -y can-utils iproute2
 ```
 
-Bring CAN up:
+If you cloned somewhere else, always `cd` into this project directory before running the commands below.
+
+### 2. Create and activate a Python environment
+
+Using Conda:
+
+```bash
+conda create -n linkerhand-l10 python=3.10 -y
+conda activate linkerhand-l10
+python3 -m pip install --upgrade pip
+```
+
+If you already have the environment:
+
+```bash
+conda activate linkerhand-l10
+```
+
+Without Conda:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install --upgrade pip
+```
+
+### 3. Install dependencies
+
+```bash
+python3 -m pip install -r requirements.txt
+sudo apt update
+sudo apt install -y iproute2 can-utils ethtool
+```
+
+If you get `No module named can`, run:
+
+```bash
+python3 -m pip install python-can python-can-candle
+```
+
+If you get `No module named serial`, run:
+
+```bash
+python3 -m pip install pyserial
+```
+
+### 4. Connect the hardware
+
+1. Connect the right EG/KTH5702 glove to the laptop by USB.
+2. Connect the USB-to-CAN adapter to the laptop.
+3. Connect CAN-H, CAN-L, and ground according to the adapter and L10 wiring.
+4. Power on the LinkerHand L10.
+5. Make sure no other controller is running.
+
+### 5. Find the glove serial port
+
+```bash
+python3 -m serial.tools.list_ports
+ls /dev/ttyUSB*
+ls /dev/ttyACM*
+```
+
+In the current setup, the glove is usually:
+
+```text
+/dev/ttyUSB0
+```
+
+Confirm raw glove data:
+
+```bash
+python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw
+```
+
+Move the glove. You should see changing KTH5702 sensor angles. Press `Ctrl+C` to stop.
+
+### 6. Find the CAN interface
+
+```bash
+ip link
+ip -br link show type can
+```
+
+You should see `can0` or `can1`.
+
+Optional helper:
+
+```bash
+chmod +x find_can.sh
+./find_can.sh
+```
+
+If you do not see a CAN interface, check the USB-to-CAN adapter, cable, driver, and power.
+
+### 7. Reset CAN: down, configure, up
+
+Most L10 setups use 1 Mbps.
+
+For `can0`:
 
 ```bash
 sudo ip link set can0 down
 sudo ip link set can0 type can bitrate 1000000 restart-ms 100
 sudo ip link set can0 txqueuelen 1000
 sudo ip link set can0 up
+ip -details link show can0
 ```
 
-Check the glove:
+For `can1`, replace `can0` with `can1`.
+
+Watch CAN traffic if needed:
 
 ```bash
-python3 -m serial.tools.list_ports
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw
+candump can0
 ```
 
-## Terminal Control
+Press `Ctrl+C` to stop `candump`.
 
-Preview without moving the hand:
+### 8. Test the left L10 alone
+
+```bash
+python3 linkerhand_l10_sdk.py --can can0 --hand-type left boot
+python3 linkerhand_l10_sdk.py --can can0 --hand-type left state
+```
+
+Good signs:
+
+- SDK version prints.
+- The hand is detected by version, serial, or state.
+- A 10-value state prints from 0 to 255.
+
+If this fails, fix CAN/L10 first before running glove control.
+
+## Daily Start
+
+```bash
+cd ~/linkerhand_eg_to_l10
+conda activate linkerhand-l10
+python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw
+python3 linkerhand_l10_sdk.py --can can0 --hand-type left state
+```
+
+Preview the bridge without moving the hand:
 
 ```bash
 python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left
@@ -48,19 +200,41 @@ Send to the left L10:
 python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
 ```
 
-The same terminal program is also available here:
+## Terminal Control
+
+Root command:
+
+```bash
+python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
+```
+
+Separate terminal launcher:
 
 ```bash
 python3 terminal_control/glove_to_l10_terminal.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
 ```
 
+Useful terminal commands:
+
+| Task | Command |
+| --- | --- |
+| Show help | `python3 glove_to_l10.py --help` |
+| Read raw glove values | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw` |
+| Preview bridge, no movement | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left` |
+| Live bridge | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send` |
+| Use `can1` | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can1 --hand left --send` |
+| Change max angle | `python3 glove_to_l10.py --angle-max 360 --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send` |
+| Calibrated mode preview | `python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --hand-can can0 --hand left` |
+
 ## GUI Control
+
+Start the GUI:
 
 ```bash
 python3 gui_control/glove_to_l10_gui.py
 ```
 
-Use the default values for your current setup:
+Use these default values for the current setup:
 
 ```text
 Glove port: /dev/ttyUSB0
@@ -70,7 +244,13 @@ Mapping: angle
 Angle max: 360
 ```
 
-Enable `Send to hand` only after preview/raw data looks correct.
+Recommended GUI flow:
+
+1. Start without `Send to hand`.
+2. Confirm the terminal output changes when the glove moves.
+3. Enable `Send to hand`.
+4. Press `Start`.
+5. Press `Stop` before changing settings.
 
 ## Current Mapping
 
@@ -103,16 +283,77 @@ Ignored glove sensors:
 5, 7, 8, 11, 14
 ```
 
+L10 joint order:
+
+1. Thumb Base
+2. Thumb Side Swing
+3. Index Base
+4. Middle Base
+5. Ring Base
+6. Little Base
+7. Index Side Swing
+8. Ring Side Swing
+9. Little Side Swing
+10. Thumb Rotation
+
 ## Optional Calibrated Mode
 
-The old open/fist calibration mode is still available:
+The default angle mode does not require calibration.
+
+If you want open/fist calibration instead:
 
 ```bash
-python3 glove_to_l10.py --mapping calibrated --calibrate-open
-python3 glove_to_l10.py --mapping calibrated --calibrate-fist
+python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --calibrate-open
+python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --calibrate-fist
 python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
 ```
 
-## Stop
+This creates or updates:
 
-Press `Ctrl+C` in terminal mode. In GUI mode, press `Stop`.
+```text
+glove_l10_calibration.json
+```
+
+The file is ignored by Git because it is specific to your glove and hand.
+
+## Troubleshooting
+
+| Problem or return message | What to do first |
+| --- | --- |
+| `git clone` fails on Windows with `Filename too long` | Use a Linux laptop, or clone into a short path such as `C:\src`. On Windows you can also run `git config --global core.longpaths true`, then clone again. |
+| `python3: command not found` | Install Python 3, or use the Python inside your Conda environment. |
+| `No module named can` | Run `python3 -m pip install python-can python-can-candle`. |
+| `No module named serial` | Run `python3 -m pip install pyserial`. |
+| `No module named PyQt5` | Run `python3 -m pip install PyQt5`, or use terminal mode instead of GUI mode. |
+| `/dev/ttyUSB0` does not exist | Replug the glove and run `python3 -m serial.tools.list_ports`. It may be `/dev/ttyUSB1` or `/dev/ttyACM0`. |
+| `Permission denied: /dev/ttyUSB0` | Run `sudo usermod -aG dialout $USER`, then log out/in or run `newgrp dialout`. |
+| Raw glove mode prints nothing | Check glove power, USB cable, port name, and baud rate. Try `--baud 115200`, `--baud 57600`, or `--baud 230400`. |
+| `can0` does not appear in `ip link` | Check USB-to-CAN connection, driver, USB port, and cable. Replug the adapter. Run `ip -br link show type can`. |
+| `Cannot find device "can0"` | Use the interface that exists, for example `--hand-can can1`, or fix the adapter/driver until `can0` appears. |
+| `candump: command not found` | Run `sudo apt update && sudo apt install -y can-utils`. |
+| `ip: command not found` | Run `sudo apt update && sudo apt install -y iproute2`. |
+| `Operation not permitted` | Use `sudo` for `ip link` commands. |
+| `RTNETLINK answers: Device or resource busy` | Stop other controllers, then run `sudo ip link set can0 down` and bring it back up. |
+| `can0 interface is not open` | Run the CAN down/configure/up commands, then retry. |
+| `SDK did not detect the hand` | Check CAN setup, hand power, `--hand left`, and `--hand-can can0`. Test with `python3 linkerhand_l10_sdk.py --can can0 --hand-type left state`. |
+| Hand moves unexpectedly | Stop with `Ctrl+C` or GUI `Stop`. Preview without `--send`. Confirm the sensor mapping and `--angle-max`. |
+| Wrong side responds | Use `--hand left` for the left L10. The glove being right-hand does not change the LinkerHand side. |
+| Another script controls the hand | Close ROS nodes, dashboards, old terminal tools, and any other LinkerHand process. |
+
+## When You Are Done
+
+Stop terminal mode with:
+
+```bash
+Ctrl+C
+```
+
+Stop GUI mode with the `Stop` button.
+
+Optionally bring CAN down:
+
+```bash
+sudo ip link set can0 down
+```
+
+Power off the hand when it is safe.
