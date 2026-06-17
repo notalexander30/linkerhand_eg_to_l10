@@ -77,6 +77,18 @@ FEATURE_TESTS = [
     },
 ]
 FEATURE_BY_MOTOR = {int(feature["motor"]): feature for feature in FEATURE_TESTS}
+REFERENCE_GLOVE_KEYS_BY_MOTOR = {
+    0: "thumb_2",
+    1: "thumb_1",
+    2: "index_2",
+    3: "middle_2",
+    4: "ring_2",
+    5: "pinky_2",
+    6: "index_0",
+    7: "ring_0",
+    8: "pinky_0",
+    9: "thumb_0",
+}
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -300,6 +312,24 @@ def selected_feature_tests(args: argparse.Namespace) -> list[dict[str, Any]]:
     return tests
 
 
+def default_key_for_motor(motor_index: int | None, ranked: list[tuple[str, float]]) -> str:
+    """Prefer the hand-tested reference key; fall back to the largest live delta."""
+
+    if motor_index in REFERENCE_GLOVE_KEYS_BY_MOTOR:
+        return REFERENCE_GLOVE_KEYS_BY_MOTOR[int(motor_index)]
+    return ranked[0][0]
+
+
+def print_reference_hint(motor_index: int | None, default_key: str, ranked: list[tuple[str, float]]) -> None:
+    """Show when the reference key differs from the strongest moved sensor."""
+
+    strongest_key = ranked[0][0]
+    if motor_index in REFERENCE_GLOVE_KEYS_BY_MOTOR:
+        print(f"\nReference glove_key for motor {motor_index}: {default_key}")
+    if default_key != strongest_key:
+        print(f"Strongest live delta was {strongest_key}; keeping reference unless you type another key.")
+
+
 def run_all_features(args: argparse.Namespace, data: dict[str, Any], frame_iter: Iterator[dict[str, float]]) -> None:
     """Run a guided open/moved capture for each L10 feature."""
 
@@ -320,7 +350,8 @@ def run_all_features(args: argparse.Namespace, data: dict[str, Any], frame_iter:
         )
         print_probe_table(open_frame, moved_frame, ranked, args.top)
 
-        default_key = ranked[0][0]
+        default_key = default_key_for_motor(motor_index, ranked)
+        print_reference_hint(motor_index, default_key, ranked)
         selected_key = select_glove_key(args, motor_index=motor_index, default_key=default_key)
         print_copy_block(
             motor_index=motor_index,
@@ -345,10 +376,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     parser = argparse.ArgumentParser(description="Probe EG glove keypoints and optionally patch one L10 YAML motor.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="YAML mapping to update.")
-    parser.add_argument("--motor", type=int, default=None, help="L10 motor index to patch with the strongest sensor.")
+    parser.add_argument("--motor", type=int, default=None, help="L10 motor index to patch.")
     parser.add_argument("--all-features", action="store_true", help="Probe all 10 L10 features one-by-one.")
     parser.add_argument("--motors", nargs="+", type=int, default=None, help="With --all-features, probe only these motors.")
-    parser.add_argument("--glove-key", default=None, help="Force this glove_key instead of the strongest moved sensor.")
+    parser.add_argument("--glove-key", default=None, help="Force this glove_key instead of the reference or strongest moved sensor.")
     parser.add_argument("--label", default="target finger", help="Text shown in prompts, for example index or pinky.")
     parser.add_argument("--glove-port", default="/dev/ttyUSB0", help="USB serial port for the EG glove.")
     parser.add_argument("--baud", type=int, default=115200, help="Glove serial baud rate.")
@@ -356,7 +387,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--settle", type=float, default=0.4, help="Seconds to wait after each prompt.")
     parser.add_argument("--top", type=int, default=6, help="How many strongest sensor candidates to print.")
     parser.add_argument("--no-write", action="store_true", help="Only print captured values; do not patch YAML.")
-    parser.add_argument("--auto-select", action="store_true", help="Write the strongest sensor without asking for confirmation.")
+    parser.add_argument("--auto-select", action="store_true", help="Write the default reference key without asking for confirmation.")
     parser.add_argument("--mock-glove", action="store_true", help="Use generated glove values for testing.")
     parser.add_argument("--non-interactive", action="store_true", help="Skip Enter prompts.")
     return parser
@@ -396,10 +427,12 @@ def main() -> None:
     )
     print_probe_table(open_frame, moved_frame, ranked, args.top)
 
-    selected_key = select_glove_key(args, motor_index=args.motor, default_key=ranked[0][0])
+    default_key = default_key_for_motor(args.motor, ranked)
+    print_reference_hint(args.motor, default_key, ranked)
+    selected_key = select_glove_key(args, motor_index=args.motor, default_key=default_key)
     print_copy_block(
         motor_index=args.motor,
-        glove_key=selected_key or ranked[0][0],
+        glove_key=selected_key or default_key,
         open_frame=open_frame,
         moved_frame=moved_frame,
     )
