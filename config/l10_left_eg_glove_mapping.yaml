@@ -1,15 +1,29 @@
 hand_joint: L10
 hand_type: left
 can: can0
+
+# Motion controls:
+# control_hz: command loop rate. Higher feels more live, but 60 is a good start.
 control_hz: 60
+# dry_run: true prints poses only; use --no-dry-run to move the hand.
 dry_run: true
+# motion_profile: responsive_1to1 ignores max_delta_per_cycle for fastest following.
+# Use "safe" if you want max_delta_per_cycle to slow sudden jumps.
 motion_profile: responsive_1to1
+# smoothing_mode: one_euro is adaptive smoothing for fast-but-smooth glove motion.
+# Use "none" for raw motion or "ema" for simple exponential smoothing.
 smoothing_mode: one_euro
+# smoothing_alpha: used only when smoothing_mode is ema. Higher is faster, lower is smoother.
 smoothing_alpha: 0.18
+# one_euro_min_cutoff: baseline responsiveness. Higher is faster; lower removes more jitter.
 one_euro_min_cutoff: 2.0
+# one_euro_beta: fast-motion boost. Higher follows quick open/close movements faster.
 one_euro_beta: 0.08
+# one_euro_d_cutoff: derivative smoothing for the speed estimate. Usually leave at 1.0.
 one_euro_d_cutoff: 1.0
+# pose_deadband: ignore tiny pose changes. 0 gives most 1:1 response.
 pose_deadband: 0
+# max_delta_per_cycle: speed limit per update. 0 means no limit. Ignored in responsive_1to1.
 max_delta_per_cycle: 0
 motor_count: 10
 
@@ -38,6 +52,7 @@ channels:
     hand_open: 255
     hand_closed: 90
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: thumb_1
     glove_key: thumb_1
@@ -47,6 +62,7 @@ channels:
     hand_open: 70
     hand_closed: 0
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_0
     glove_key: index_0
@@ -56,6 +72,7 @@ channels:
     hand_open: 255
     hand_closed: 0
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: middle_0
     glove_key: middle_0
@@ -65,6 +82,7 @@ channels:
     hand_open: 255
     hand_closed: 0
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: ring_0
     glove_key: ring_0
@@ -74,6 +92,7 @@ channels:
     hand_open: 255
     hand_closed: 0
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_0
     glove_key: pinky_0
@@ -83,6 +102,7 @@ channels:
     hand_open: 255
     hand_closed: 0
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_1
     glove_key: index_1
@@ -92,6 +112,7 @@ channels:
     hand_open: 255
     hand_closed: 128
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: ring_1
     glove_key: ring_1
@@ -101,6 +122,7 @@ channels:
     hand_open: 255
     hand_closed: 67
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_1
     glove_key: pinky_1
@@ -110,6 +132,7 @@ channels:
     hand_open: 255
     hand_closed: 89
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: thumb_2
     glove_key: thumb_2
@@ -119,4 +142,5 @@ channels:
     hand_open: 255
     hand_closed: 197
     invert: false
+    # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0

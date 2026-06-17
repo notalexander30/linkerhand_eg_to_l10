@@ -49,6 +49,8 @@ SERIAL_SENSOR_KEYS = [
 
 @dataclass(frozen=True)
 class ChannelMapping:
+    """One glove sensor to one L10 motor mapping; tune these under channels in YAML."""
+
     name: str
     glove_key: str
     motor_index: int
@@ -62,6 +64,8 @@ class ChannelMapping:
 
 @dataclass(frozen=True)
 class TeleopConfig:
+    """Top-level YAML settings for hand setup, smoothing, speed, and channel mapping."""
+
     hand_joint: str
     hand_type: str
     can: str
@@ -82,14 +86,20 @@ class TeleopConfig:
 
 
 def clamp(value: float, low: float, high: float) -> float:
+    """Limit a float into a safe range; used before sending motor commands."""
+
     return max(low, min(high, value))
 
 
 def clamp_int(value: float, low: int = 0, high: int = 255) -> int:
+    """Limit an L10 command to 0..255 and round to the integer SDK expects."""
+
     return int(round(clamp(value, low, high)))
 
 
 def parse_channel(raw: Mapping[str, Any]) -> ChannelMapping:
+    """Read one YAML channel; gain is the per-motor master-to-slave multiplier."""
+
     required = [
         "name",
         "glove_key",
@@ -117,6 +127,8 @@ def parse_channel(raw: Mapping[str, Any]) -> ChannelMapping:
 
 
 def load_config(path: Path) -> TeleopConfig:
+    """Load YAML controls; motion_profile decides fast 1:1 mode versus capped safe mode."""
+
     try:
         import yaml
     except ImportError as exc:
@@ -186,6 +198,8 @@ class GloveReader:
         self.settings = dict(settings)
 
     def frames(self) -> Iterator[dict[str, float]]:
+        """Yield glove frames as dictionaries like {'thumb_0': value, 'index_0': value}."""
+
         if self.mock:
             yield from self._mock_frames()
             return
@@ -202,6 +216,8 @@ class GloveReader:
         raise SystemExit(f"Unsupported glove_reader.mode: {mode}")
 
     def _mock_frames(self) -> Iterator[dict[str, float]]:
+        """Generate fake opening/closing glove motion for dry-run testing without hardware."""
+
         keys = list(dict.fromkeys(SERIAL_SENSOR_KEYS))
         while True:
             for flex in itertools.chain(
@@ -212,6 +228,8 @@ class GloveReader:
                 yield {key: flex * 1000.0 for key in keys}
 
     def _serial_frames(self) -> Iterator[dict[str, float]]:
+        """Use the existing KTH5702 serial parser from glove_to_l10.py for the real glove."""
+
         try:
             from glove_to_l10 import glove_frames
         except ImportError as exc:
@@ -230,6 +248,8 @@ class GloveReader:
 
 
 def map_channel(value: float, channel: ChannelMapping) -> int:
+    """Convert one raw glove value into one L10 motor value using calibration plus gain."""
+
     normalized = (value - channel.glove_open) / (channel.glove_closed - channel.glove_open)
     normalized = clamp(normalized, 0.0, 1.0)
     if channel.invert:
@@ -240,6 +260,8 @@ def map_channel(value: float, channel: ChannelMapping) -> int:
 
 
 def open_pose_from_config(config: TeleopConfig) -> list[int]:
+    """Build the open-hand pose from each channel's hand_open value."""
+
     pose = [255] * config.motor_count
     for channel in config.channels:
         pose[channel.motor_index] = clamp_int(channel.hand_open)
@@ -251,6 +273,8 @@ def map_glove_to_pose(
     config: TeleopConfig,
     warned_missing: set[str],
 ) -> list[int]:
+    """Convert all available glove values into the full 10-number L10 pose."""
+
     pose = open_pose_from_config(config)
     for channel in config.channels:
         if channel.glove_key not in glove_values:
@@ -267,6 +291,8 @@ def map_glove_to_pose(
 
 
 def smooth_pose(previous: Optional[list[int]], current: list[int], alpha: float) -> list[int]:
+    """Simple EMA smoothing; used only when smoothing_mode is 'ema'."""
+
     if previous is None or alpha >= 1.0:
         return list(current)
     if alpha <= 0.0:
@@ -278,11 +304,15 @@ def smooth_pose(previous: Optional[list[int]], current: list[int], alpha: float)
 
 
 def smoothing_factor(dt: float, cutoff: float) -> float:
+    """Convert a One Euro cutoff frequency into a low-pass alpha value."""
+
     tau = 1.0 / (2.0 * math.pi * cutoff)
     return 1.0 / (1.0 + tau / max(dt, 1e-6))
 
 
 class LowPassFilter:
+    """Tiny reusable low-pass filter used internally by the One Euro filter."""
+
     def __init__(self, initial_value: Optional[float] = None) -> None:
         self.value = initial_value
 
@@ -310,6 +340,8 @@ class OneEuroFilter:
         self.last_time: Optional[float] = None
 
     def apply(self, value: float, timestamp: float) -> float:
+        """Filter one motor command; beta controls how quickly fast motion passes through."""
+
         if self.last_time is None:
             self.last_time = timestamp
             return self.signal_filter.apply(value, 1.0)
@@ -327,6 +359,8 @@ class OneEuroFilter:
 
 
 class PoseSmoother:
+    """Applies the selected smoothing_mode and pose_deadband to the 10-motor pose."""
+
     def __init__(self, config: TeleopConfig, initial_pose: list[int]) -> None:
         self.config = config
         self.previous_pose = list(initial_pose)
@@ -341,6 +375,8 @@ class PoseSmoother:
         ]
 
     def apply(self, mapped_pose: list[int], timestamp: float) -> list[int]:
+        """Return a smoothed pose; tune one_euro_* or smoothing_alpha in YAML."""
+
         if self.config.smoothing_mode in {"none", "off"}:
             filtered_pose = list(mapped_pose)
         elif self.config.smoothing_mode in {"ema", "exponential"}:
@@ -364,6 +400,8 @@ class PoseSmoother:
 
 
 def limit_delta(previous: Optional[list[int]], current: list[int], max_delta: int) -> list[int]:
+    """Optional speed cap; max_delta_per_cycle=0 means fastest uncapped movement."""
+
     if previous is None or max_delta <= 0:
         return list(current)
     limited = []
@@ -375,6 +413,8 @@ def limit_delta(previous: Optional[list[int]], current: list[int], max_delta: in
 
 
 def connect_hand(config: TeleopConfig):
+    """Create the LinkerHand SDK object for the left L10 on the configured CAN bus."""
+
     from LinkerHand.linker_hand_api import LinkerHandApi
 
     print(
@@ -386,19 +426,27 @@ def connect_hand(config: TeleopConfig):
 
 
 def send_pose(api: Any, pose: list[int]) -> None:
+    """Send the final 10-value pose through LinkerHandApi.finger_move()."""
+
     api.finger_move(pose=pose)
 
 
 def print_glove(values: Mapping[str, float]) -> None:
+    """Debug print for raw glove values; avoid during live control for smoother timing."""
+
     ordered = " ".join(f"{key}={values[key]:.1f}" for key in sorted(values))
     print(f"glove {ordered}")
 
 
 def print_pose(pose: Iterable[int]) -> None:
+    """Debug print for final L10 pose; avoid during live control for smoother timing."""
+
     print(f"pose {[int(value) for value in pose]}")
 
 
 def run(args: argparse.Namespace) -> None:
+    """Main loop: read glove, map to pose, smooth/limit it, then dry-run or send."""
+
     config = load_config(args.config)
     if args.hz is not None:
         config = TeleopConfig(**{**config.__dict__, "control_hz": float(args.hz)})
@@ -462,6 +510,8 @@ def run(args: argparse.Namespace) -> None:
 
 
 def build_parser() -> argparse.ArgumentParser:
+    """CLI flags override common YAML options like dry-run, CAN, and loop Hz."""
+
     parser = argparse.ArgumentParser(description="Right EG glove to left LinkerHand L10 teleoperation.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="YAML mapping config path.")
     parser.add_argument("--dry-run", action="store_true", help="Print mapped poses without moving the hand.")
@@ -475,6 +525,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Optional[list[str]] = None) -> None:
+    """Program entry point."""
+
     args = build_parser().parse_args(argv)
     if args.dry_run and args.no_dry_run:
         raise SystemExit("Choose only one of --dry-run or --no-dry-run.")

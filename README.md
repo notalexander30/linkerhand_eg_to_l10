@@ -315,6 +315,12 @@ Too slow to close                -> keep max_delta_per_cycle: 0
 
 Avoid `--print-glove` and `--print-pose` during normal live control because terminal output can make motion feel less smooth.
 
+If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show these controls yet, add them without recalibrating:
+
+```bash
+python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
+```
+
 ## GUI Control
 
 Start the GUI:
