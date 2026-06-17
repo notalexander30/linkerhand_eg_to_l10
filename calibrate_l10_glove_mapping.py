@@ -253,6 +253,7 @@ def build_output_config(
         "can": args.can,
         "control_hz": template.control_hz,
         "dry_run": True,
+        "motion_profile": template.motion_profile,
         "smoothing_mode": template.smoothing_mode,
         "smoothing_alpha": template.smoothing_alpha,
         "one_euro_min_cutoff": template.one_euro_min_cutoff,

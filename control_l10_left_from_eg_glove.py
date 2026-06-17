@@ -67,6 +67,7 @@ class TeleopConfig:
     can: str
     control_hz: float
     dry_run: bool
+    motion_profile: str
     smoothing_mode: str
     smoothing_alpha: float
     one_euro_min_cutoff: float
@@ -147,19 +148,25 @@ def load_config(path: Path) -> TeleopConfig:
         if len(safe_exit_pose) != motor_count:
             raise ValueError("safe_exit_pose must contain exactly 10 values")
 
+    motion_profile = str(raw.get("motion_profile", "responsive_1to1")).lower()
+    is_responsive_1to1 = motion_profile in {"responsive_1to1", "one_to_one", "1to1", "fast"}
+    configured_max_delta = max(0, int(raw.get("max_delta_per_cycle", 0)))
+    max_delta_per_cycle = 0 if is_responsive_1to1 else configured_max_delta
+
     return TeleopConfig(
         hand_joint=str(raw.get("hand_joint", "L10")),
         hand_type=str(raw.get("hand_type", "left")),
         can=str(raw.get("can", DEFAULT_CAN)),
-        control_hz=float(raw.get("control_hz", 20)),
+        control_hz=float(raw.get("control_hz", 60)),
         dry_run=bool(raw.get("dry_run", True)),
+        motion_profile=motion_profile,
         smoothing_mode=str(raw.get("smoothing_mode", "one_euro")).lower(),
         smoothing_alpha=clamp(float(raw.get("smoothing_alpha", 1.0)), 0.0, 1.0),
-        one_euro_min_cutoff=max(0.001, float(raw.get("one_euro_min_cutoff", 1.0))),
-        one_euro_beta=max(0.0, float(raw.get("one_euro_beta", 0.02))),
+        one_euro_min_cutoff=max(0.001, float(raw.get("one_euro_min_cutoff", 2.0))),
+        one_euro_beta=max(0.0, float(raw.get("one_euro_beta", 0.08))),
         one_euro_d_cutoff=max(0.001, float(raw.get("one_euro_d_cutoff", 1.0))),
-        pose_deadband=max(0, int(raw.get("pose_deadband", 1))),
-        max_delta_per_cycle=max(0, int(raw.get("max_delta_per_cycle", 0))),
+        pose_deadband=max(0, int(raw.get("pose_deadband", 0 if is_responsive_1to1 else 1))),
+        max_delta_per_cycle=max_delta_per_cycle,
         motor_count=motor_count,
         channels=channels,
         safe_exit_pose=safe_exit_pose,

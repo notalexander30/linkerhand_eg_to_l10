@@ -293,21 +293,24 @@ Recommended starting values for the L10 glove bridge:
 
 ```yaml
 control_hz: 60
+motion_profile: responsive_1to1
 smoothing_mode: one_euro
-one_euro_min_cutoff: 1.0
-one_euro_beta: 0.02
+one_euro_min_cutoff: 2.0
+one_euro_beta: 0.08
 one_euro_d_cutoff: 1.0
-pose_deadband: 1
-max_delta_per_cycle: 8
+pose_deadband: 0
+max_delta_per_cycle: 0
 ```
+
+`motion_profile: responsive_1to1` makes the slave follow the mapped glove pose directly: no pose deadband and no per-cycle speed cap. Old auto-calibration files that do not have `motion_profile` use this responsive 1:1 behavior by default.
 
 Tuning rule of thumb:
 
 ```text
-Too jittery while holding still  -> lower one_euro_min_cutoff, for example 0.6
-Too laggy during fast motion     -> raise one_euro_beta, for example 0.04
-Too steppy or sudden             -> lower max_delta_per_cycle, for example 5
-Too slow to close                -> raise max_delta_per_cycle, for example 12
+Too jittery while holding still  -> lower one_euro_min_cutoff, for example 1.2
+Too laggy during fast motion     -> raise one_euro_beta, for example 0.12
+Too fast or sudden               -> set motion_profile: safe and max_delta_per_cycle: 8
+Too slow to close                -> keep max_delta_per_cycle: 0
 ```
 
 Avoid `--print-glove` and `--print-pose` during normal live control because terminal output can make motion feel less smooth.
