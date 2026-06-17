@@ -47,7 +47,8 @@ glove_reader:
   port: /dev/ttyUSB0
   baud: 115200
 
-# Right-glove channel names map anatomically to the left L10.
+# L10 motor indexes stay in SDK order. For this glove, index/pinky glove keys
+# are intentionally swapped: L10 index uses pinky_* and L10 pinky uses index_*.
 #
 # hand_open and hand_closed are seeded from the repo's L10 Open Hand and Fist
 # poses. For the main flexion motors this confirms 255=open and 0=closed.
@@ -75,7 +76,7 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_mcp_pitch
-    glove_key: index_0
+    glove_key: pinky_0
     l10_joint_name: Index Finger MCP Pitch
     motor_index: 2
     glove_open: 0
@@ -108,7 +109,7 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_finger_mcp_pitch
-    glove_key: pinky_0
+    glove_key: index_0
     l10_joint_name: Pinky Finger MCP Pitch
     motor_index: 5
     glove_open: 0
@@ -119,7 +120,7 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_adduction_abduction
-    glove_key: index_1
+    glove_key: pinky_1
     l10_joint_name: Index Finger Adduction/Abduction
     motor_index: 6
     glove_open: 0
@@ -141,7 +142,7 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_finger_adduction_abduction
-    glove_key: pinky_1
+    glove_key: index_1
     l10_joint_name: Pinky Finger Adduction/Abduction
     motor_index: 8
     glove_open: 0

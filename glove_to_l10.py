@@ -38,8 +38,6 @@ ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 FINGER_GROUPS = {
     "thumb": [0, 1, 2],
-    # This right-hand glove reports the outside fingers in the opposite order:
-    # raw sensors 3..5 are little/pinky, and raw sensors 12..14 are index.
     "index": [12, 13, 14],
     "middle": [6, 7, 8],
     "ring": [9, 10, 11],
@@ -47,7 +45,7 @@ FINGER_GROUPS = {
 }
 
 POSE_GROUPS = {
-    "thumb": [0, 1],
+    "thumb": [0, 1, 9],
     "index": [2],
     "middle": [3],
     "ring": [4],
@@ -59,16 +57,17 @@ FINGER_NAMES = ["index", "middle", "ring", "little"]
 ANGLE_SENSOR_TO_L10_JOINT = {
     0: 0,   # right glove thumb sensor 0 -> left L10 Thumb CMC Pitch
     1: 1,   # right glove thumb sensor 1 -> left L10 Thumb Adduction/Abduction
-    3: 5,   # right glove little/pinky sensor 0 -> left L10 Pinky Finger MCP Pitch
-    4: 8,   # right glove little/pinky sensor 1 -> left L10 Pinky Finger Adduction/Abduction
+    2: 9,   # right glove thumb sensor 2 -> left L10 Thumb Rotation
+    3: 5,   # right glove index-side sensor 0 -> left L10 Pinky Finger MCP Pitch
+    4: 8,   # right glove index-side sensor 1 -> left L10 Pinky Finger Adduction/Abduction
     6: 3,   # right glove middle sensor 0 -> left L10 Middle Finger MCP Pitch
     9: 4,   # right glove ring sensor 0 -> left L10 Ring Finger MCP Pitch
     10: 7,  # right glove ring sensor 1 -> left L10 Ring Finger Adduction/Abduction
-    12: 2,  # right glove index sensor 0 -> left L10 Index Finger MCP Pitch
-    13: 6,  # right glove index sensor 1 -> left L10 Index Finger Adduction/Abduction
+    12: 2,  # right glove pinky-side sensor 0 -> left L10 Index Finger MCP Pitch
+    13: 6,  # right glove pinky-side sensor 1 -> left L10 Index Finger Adduction/Abduction
 }
 
-IGNORED_GLOVE_SENSORS = [2, 5, 7, 8, 11, 14]
+IGNORED_GLOVE_SENSORS = [5, 7, 8, 11, 14]
 
 
 def strip_ansi(text: str) -> str:
@@ -303,10 +302,10 @@ def pose_from_glove(frame: dict[int, float], open_angles: dict, fist_angles: dic
 
     pose[0] = joint_value(0, thumb_base)
     pose[1] = joint_value(1, thumb_side)
-    pose[9] = OPEN_POSE[9]
+    pose[9] = joint_value(9, thumb_rotation)
     flex["thumb_base"] = thumb_base
     flex["thumb_side"] = thumb_side
-    flex["thumb_rotation"] = 0.0
+    flex["thumb_rotation"] = thumb_rotation
     return flex, sensor_amounts, pose
 
 

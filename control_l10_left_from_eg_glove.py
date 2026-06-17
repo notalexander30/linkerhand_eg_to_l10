@@ -6,9 +6,9 @@ This script keeps the LinkerHand SDK as the only hand-control path:
     LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")
     api.finger_move(pose=[...10 values...])
 
-The glove side is right and the hand side is left, but mapping is by anatomical
-finger name. A right index-finger glove channel controls the left index motor,
-not the pinky.
+The L10 motor order stays in the SDK order. For this glove setup, the YAML can
+swap only the index/pinky glove keys while keeping the L10 index and pinky motor
+indexes unchanged.
 """
 
 from __future__ import annotations
@@ -44,20 +44,18 @@ SERIAL_SENSOR_KEYS = [
     "thumb_0",
     "thumb_1",
     "thumb_2",
-    # This right-hand glove reports the outside fingers in the opposite order:
-    # raw sensors 3..5 are pinky, and raw sensors 12..14 are index.
-    "pinky_0",
-    "pinky_1",
-    "pinky_2",
+    "index_0",
+    "index_1",
+    "index_2",
     "middle_0",
     "middle_1",
     "middle_2",
     "ring_0",
     "ring_1",
     "ring_2",
-    "index_0",
-    "index_1",
-    "index_2",
+    "pinky_0",
+    "pinky_1",
+    "pinky_2",
 ]
 
 
