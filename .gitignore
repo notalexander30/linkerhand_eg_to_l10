@@ -5,3 +5,4 @@ __pycache__/
 venv/
 .env
 glove_l10_calibration.json
+config/l10_left_eg_glove_mapping.auto.yaml

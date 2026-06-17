@@ -58,6 +58,7 @@ class ChannelMapping:
     hand_open: int
     hand_closed: int
     invert: bool = False
+    gain: float = 1.0
 
 
 @dataclass(frozen=True)
@@ -106,6 +107,7 @@ def parse_channel(raw: Mapping[str, Any]) -> ChannelMapping:
         hand_open=clamp_int(float(raw["hand_open"])),
         hand_closed=clamp_int(float(raw["hand_closed"])),
         invert=bool(raw.get("invert", False)),
+        gain=max(0.0, float(raw.get("gain", raw.get("multiplier", 1.0)))),
     )
 
 
@@ -216,6 +218,7 @@ def map_channel(value: float, channel: ChannelMapping) -> int:
     normalized = clamp(normalized, 0.0, 1.0)
     if channel.invert:
         normalized = 1.0 - normalized
+    normalized = clamp(normalized * channel.gain, 0.0, 1.0)
     hand_value = channel.hand_open + normalized * (channel.hand_closed - channel.hand_open)
     return clamp_int(hand_value)
 

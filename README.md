@@ -255,6 +255,36 @@ Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, s
 
 To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
 
+### Auto-Match The 15 Glove Sensors To 10 L10 Motors
+
+If the glove sensor order does not match the L10 motor order, run the interactive matcher:
+
+```bash
+python3 calibrate_l10_glove_mapping.py --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
+```
+
+The matcher first sends an open L10 pose of ten `255` values, records the glove-open baseline, then prompts you through the 10 L10 motors. For each prompt, move only the requested right-glove finger or DOF and hold it still. The script selects the glove sensor with the strongest change from the 15 available sensors and writes:
+
+```text
+config/l10_left_eg_glove_mapping.auto.yaml
+```
+
+Preview the generated mapping without moving the hand:
+
+```bash
+python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --dry-run --print-glove --print-pose
+```
+
+If the printed 10-value pose follows the glove correctly, run live:
+
+```bash
+python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run --print-pose
+```
+
+Each channel has a `gain` value, which is the master-to-slave movement multiplier. Use `gain: 1.0` for normal open-to-closed mapping, increase it if the L10 does not close enough, and decrease it if it moves too far.
+
+If one glove sensor should drive more than one L10 motor, add `--allow-duplicate-sensors` during calibration.
+
 ## GUI Control
 
 Start the GUI:
