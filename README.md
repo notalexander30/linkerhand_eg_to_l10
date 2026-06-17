@@ -226,6 +226,35 @@ Useful terminal commands:
 | Change max angle | `python3 glove_to_l10.py --angle-max 360 --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send` |
 | Calibrated mode preview | `python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --hand-can can0 --hand left` |
 
+## YAML Mapping Controller
+
+`control_l10_left_from_eg_glove.py` is a config-first teleoperation entry point for a right EG glove controlling a left L10. It uses the local LinkerHand SDK as:
+
+```python
+LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")
+api.finger_move(pose=pose)
+```
+
+The SDK `finger_move()` method sends a 10-value L10 pose through the lower-level `set_joint_positions()` implementation.
+
+Dry-run with generated glove values:
+
+```bash
+python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.yaml --mock-glove --dry-run --print-glove --print-pose
+```
+
+Live control with the real hand:
+
+```bash
+python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.yaml --no-dry-run --print-pose
+```
+
+The default config keeps `dry_run: true`; use `--no-dry-run` only after the printed pose looks safe. Press `Ctrl+C` to stop; in live mode the script sends the configured open-hand `safe_exit_pose` before exiting.
+
+Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, set `glove_open` to the raw glove value with that finger open and `glove_closed` to the value with that finger bent. Set `hand_open` and `hand_closed` to the matching L10 motor limits. The current defaults use the repo's L10 `Open Hand` and `Fist` examples, where the main flexion motors confirm `255=open` and `0=closed`.
+
+To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
+
 ## GUI Control
 
 Start the GUI:

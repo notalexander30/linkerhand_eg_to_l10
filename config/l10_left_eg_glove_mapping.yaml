@@ -1,0 +1,106 @@
+hand_joint: L10
+hand_type: left
+can: can0
+control_hz: 20
+dry_run: true
+smoothing_alpha: 0.35
+max_delta_per_cycle: 12
+motor_count: 10
+
+# Used on Ctrl+C in live mode. This is the left-hand "Open Hand" pose from
+# LinkerHand/config/L10_positions.yaml.
+safe_exit_pose: [255, 70, 255, 255, 255, 255, 255, 255, 255, 255]
+
+glove_reader:
+  # The existing repo has serial parsing in glove_to_l10.py for KTH5702 text
+  # lines. Future modes can be added in GloveReader for UDP, ROS, or vendor SDKs.
+  mode: serial
+  port: /dev/ttyUSB0
+  baud: 115200
+
+# Right-glove channel names map anatomically to the left L10. Do not mirror
+# index and pinky just because master and slave are opposite hands.
+#
+# hand_open and hand_closed are seeded from the repo's L10 Open Hand and Fist
+# poses. For the main flexion motors this confirms 255=open and 0=closed.
+channels:
+  - name: thumb_0
+    glove_key: thumb_0
+    motor_index: 0
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 90
+    invert: false
+  - name: thumb_1
+    glove_key: thumb_1
+    motor_index: 1
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 70
+    hand_closed: 0
+    invert: false
+  - name: index_0
+    glove_key: index_0
+    motor_index: 2
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 0
+    invert: false
+  - name: middle_0
+    glove_key: middle_0
+    motor_index: 3
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 0
+    invert: false
+  - name: ring_0
+    glove_key: ring_0
+    motor_index: 4
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 0
+    invert: false
+  - name: pinky_0
+    glove_key: pinky_0
+    motor_index: 5
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 0
+    invert: false
+  - name: index_1
+    glove_key: index_1
+    motor_index: 6
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 128
+    invert: false
+  - name: ring_1
+    glove_key: ring_1
+    motor_index: 7
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 67
+    invert: false
+  - name: pinky_1
+    glove_key: pinky_1
+    motor_index: 8
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 89
+    invert: false
+  - name: thumb_2
+    glove_key: thumb_2
+    motor_index: 9
+    glove_open: 0
+    glove_closed: 1000
+    hand_open: 255
+    hand_closed: 197
+    invert: false
