@@ -287,6 +287,28 @@ Each channel has a `gain` value, which is the master-to-slave movement multiplie
 
 If one glove sensor should drive more than one L10 motor, add `--allow-duplicate-sensors` during calibration.
 
+### Quick Probe One Finger
+
+Use this when you only want to capture glove values first and immediately patch one YAML motor. It does not move the L10 hand.
+
+Probe L10 index bend motor `2`:
+
+```bash
+python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motor 2 --label index
+```
+
+The script asks for glove-open, then asks you to move only that finger. It prints all 15 glove sensor values, picks the strongest sensor, and writes that `glove_key`, `glove_open`, and `glove_closed` into the YAML. If you only want to print values to send back here:
+
+```bash
+python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motor 2 --label index --no-write
+```
+
+If you already know the correct glove key, force it:
+
+```bash
+python3 probe_glove_keypoints.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motor 2 --label index --glove-key index_0
+```
+
 ### Smoother Motion
 
 The YAML controller supports `smoothing_mode: one_euro`, based on the [1 Euro Filter](https://gery.casiez.net/1euro/) for reducing jitter while keeping fast human motion responsive.
