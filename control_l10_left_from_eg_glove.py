@@ -44,18 +44,20 @@ SERIAL_SENSOR_KEYS = [
     "thumb_0",
     "thumb_1",
     "thumb_2",
-    "index_0",
-    "index_1",
-    "index_2",
+    # This right-hand glove reports the outside fingers in the opposite order:
+    # raw sensors 3..5 are pinky, and raw sensors 12..14 are index.
+    "pinky_0",
+    "pinky_1",
+    "pinky_2",
     "middle_0",
     "middle_1",
     "middle_2",
     "ring_0",
     "ring_1",
     "ring_2",
-    "pinky_0",
-    "pinky_1",
-    "pinky_2",
+    "index_0",
+    "index_1",
+    "index_2",
 ]
 
 

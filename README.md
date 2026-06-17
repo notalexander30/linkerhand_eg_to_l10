@@ -255,6 +255,8 @@ Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, s
 
 To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
 
+For this right-hand glove, the outside finger serial order is corrected in code: raw sensors `3..5` are treated as pinky, and raw sensors `12..14` are treated as index. Keep the YAML anatomical, so L10 motor `2` uses `index_0` and motor `5` uses `pinky_0`.
+
 ### Auto-Match The 15 Glove Sensors To 10 L10 Motors
 
 If the glove sensor order does not match the L10 motor order, run the interactive matcher:
@@ -328,6 +330,8 @@ If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show the
 ```bash
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
 ```
+
+That command also repairs the canonical glove keys, including index/pinky: motor `2` -> `index_0`, motor `5` -> `pinky_0`, motor `6` -> `index_1`, and motor `8` -> `pinky_1`.
 
 For faster live streaming instead of one-second set-state snapshots:
 
