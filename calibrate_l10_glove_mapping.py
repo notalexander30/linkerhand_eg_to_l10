@@ -231,6 +231,8 @@ def channel_to_output(channel, args: argparse.Namespace) -> dict[str, Any]:
         "glove_closed": channel.glove_closed,
         "hand_open": channel.hand_open,
         "hand_closed": channel.hand_closed,
+        "enabled": channel.enabled,
+        "fixed_value": channel.fixed_value,
         "invert": channel.invert,
         "gain": float(args.gain),
     }
@@ -258,6 +260,8 @@ def build_output_config(
         output_channel["motor_index"] = channel.motor_index
         output_channel.setdefault("hand_open", channel.hand_open)
         output_channel.setdefault("hand_closed", channel.hand_closed)
+        output_channel.setdefault("enabled", channel.enabled)
+        output_channel.setdefault("fixed_value", channel.fixed_value)
         output_channel.setdefault("invert", channel.invert)
         output_channel.setdefault("gain", float(args.gain))
 

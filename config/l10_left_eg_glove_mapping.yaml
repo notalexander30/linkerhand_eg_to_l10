@@ -47,8 +47,7 @@ glove_reader:
   port: /dev/ttyUSB0
   baud: 115200
 
-# Right-glove channel names map anatomically to the left L10. Do not mirror
-# index and pinky just because master and slave are opposite hands.
+# Right-glove channel names map anatomically to the left L10.
 #
 # hand_open and hand_closed are seeded from the repo's L10 Open Hand and Fist
 # poses. For the main flexion motors this confirms 255=open and 0=closed.
@@ -72,8 +71,7 @@ channels:
     glove_closed: 1000
     hand_open: 255
     hand_closed: 0
-    # invert: true mirrors right-glove thumb side motion onto the left hand.
-    invert: true
+    invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_mcp_pitch
@@ -157,6 +155,9 @@ channels:
     glove_key: thumb_2
     l10_joint_name: Thumb Rotation
     motor_index: 9
+    # Disable thumb rotation on the L10 hand; keep it fixed open/neutral.
+    enabled: false
+    fixed_value: 255
     glove_open: 0
     glove_closed: 1000
     hand_open: 255

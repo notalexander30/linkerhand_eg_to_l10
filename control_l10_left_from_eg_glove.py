@@ -71,6 +71,8 @@ class ChannelMapping:
     hand_open: int
     hand_closed: int
     l10_joint_name: str = ""
+    enabled: bool = True
+    fixed_value: Optional[int] = None
     invert: bool = False
     gain: float = 1.0
 
@@ -142,6 +144,12 @@ def parse_channel(raw: Mapping[str, Any]) -> ChannelMapping:
         hand_open=clamp_int(float(raw["hand_open"])),
         hand_closed=clamp_int(float(raw["hand_closed"])),
         l10_joint_name=str(raw.get("l10_joint_name", default_joint_name)),
+        enabled=bool(raw.get("enabled", True)),
+        fixed_value=(
+            None
+            if raw.get("fixed_value") is None
+            else clamp_int(float(raw["fixed_value"]))
+        ),
         invert=bool(raw.get("invert", False)),
         gain=max(0.0, float(raw.get("gain", raw.get("multiplier", 1.0)))),
     )
@@ -280,8 +288,20 @@ def hand_range_for_channel(channel: ChannelMapping, config: TeleopConfig) -> tup
     return channel.hand_open, channel.hand_closed
 
 
+def fixed_value_for_channel(channel: ChannelMapping, config: TeleopConfig) -> int:
+    """Return the fixed output for a disabled motor."""
+
+    if channel.fixed_value is not None:
+        return channel.fixed_value
+    hand_open, _hand_closed = hand_range_for_channel(channel, config)
+    return clamp_int(hand_open)
+
+
 def map_channel(value: float, channel: ChannelMapping, config: TeleopConfig) -> int:
     """Convert one raw glove value into one L10 motor value using calibration plus gain."""
+
+    if not channel.enabled:
+        return fixed_value_for_channel(channel, config)
 
     normalized = (value - channel.glove_open) / (channel.glove_closed - channel.glove_open)
     normalized = clamp(normalized, 0.0, 1.0)
@@ -312,6 +332,9 @@ def map_glove_to_pose(
 
     pose = open_pose_from_config(config)
     for channel in config.channels:
+        if not channel.enabled:
+            pose[channel.motor_index] = fixed_value_for_channel(channel, config)
+            continue
         if channel.glove_key not in glove_values:
             if channel.glove_key not in warned_missing:
                 print(
