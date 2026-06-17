@@ -285,6 +285,33 @@ Each channel has a `gain` value, which is the master-to-slave movement multiplie
 
 If one glove sensor should drive more than one L10 motor, add `--allow-duplicate-sensors` during calibration.
 
+### Smoother Motion
+
+The YAML controller supports `smoothing_mode: one_euro`, based on the [1 Euro Filter](https://gery.casiez.net/1euro/) for reducing jitter while keeping fast human motion responsive.
+
+Recommended starting values for the L10 glove bridge:
+
+```yaml
+control_hz: 60
+smoothing_mode: one_euro
+one_euro_min_cutoff: 1.0
+one_euro_beta: 0.02
+one_euro_d_cutoff: 1.0
+pose_deadband: 1
+max_delta_per_cycle: 8
+```
+
+Tuning rule of thumb:
+
+```text
+Too jittery while holding still  -> lower one_euro_min_cutoff, for example 0.6
+Too laggy during fast motion     -> raise one_euro_beta, for example 0.04
+Too steppy or sudden             -> lower max_delta_per_cycle, for example 5
+Too slow to close                -> raise max_delta_per_cycle, for example 12
+```
+
+Avoid `--print-glove` and `--print-pose` during normal live control because terminal output can make motion feel less smooth.
+
 ## GUI Control
 
 Start the GUI:

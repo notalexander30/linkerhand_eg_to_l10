@@ -20,7 +20,6 @@ import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
 from typing import Any, Iterable, Iterator, Mapping, Optional
 
 
@@ -68,7 +67,12 @@ class TeleopConfig:
     can: str
     control_hz: float
     dry_run: bool
+    smoothing_mode: str
     smoothing_alpha: float
+    one_euro_min_cutoff: float
+    one_euro_beta: float
+    one_euro_d_cutoff: float
+    pose_deadband: int
     max_delta_per_cycle: int
     motor_count: int
     channels: list[ChannelMapping]
@@ -149,7 +153,12 @@ def load_config(path: Path) -> TeleopConfig:
         can=str(raw.get("can", DEFAULT_CAN)),
         control_hz=float(raw.get("control_hz", 20)),
         dry_run=bool(raw.get("dry_run", True)),
+        smoothing_mode=str(raw.get("smoothing_mode", "one_euro")).lower(),
         smoothing_alpha=clamp(float(raw.get("smoothing_alpha", 1.0)), 0.0, 1.0),
+        one_euro_min_cutoff=max(0.001, float(raw.get("one_euro_min_cutoff", 1.0))),
+        one_euro_beta=max(0.0, float(raw.get("one_euro_beta", 0.02))),
+        one_euro_d_cutoff=max(0.001, float(raw.get("one_euro_d_cutoff", 1.0))),
+        pose_deadband=max(0, int(raw.get("pose_deadband", 1))),
         max_delta_per_cycle=max(0, int(raw.get("max_delta_per_cycle", 0))),
         motor_count=motor_count,
         channels=channels,
@@ -261,6 +270,92 @@ def smooth_pose(previous: Optional[list[int]], current: list[int], alpha: float)
     ]
 
 
+def smoothing_factor(dt: float, cutoff: float) -> float:
+    tau = 1.0 / (2.0 * math.pi * cutoff)
+    return 1.0 / (1.0 + tau / max(dt, 1e-6))
+
+
+class LowPassFilter:
+    def __init__(self, initial_value: Optional[float] = None) -> None:
+        self.value = initial_value
+
+    def apply(self, value: float, alpha: float) -> float:
+        if self.value is None:
+            self.value = value
+            return value
+        self.value = alpha * value + (1.0 - alpha) * self.value
+        return self.value
+
+
+class OneEuroFilter:
+    """Adaptive low-pass filter for human motion input.
+
+    The cutoff rises when the signal moves quickly, which reduces lag, and falls
+    when the signal is slow or still, which reduces jitter.
+    """
+
+    def __init__(self, min_cutoff: float, beta: float, d_cutoff: float, initial_value: float) -> None:
+        self.min_cutoff = min_cutoff
+        self.beta = beta
+        self.d_cutoff = d_cutoff
+        self.signal_filter = LowPassFilter(initial_value)
+        self.derivative_filter = LowPassFilter(0.0)
+        self.last_time: Optional[float] = None
+
+    def apply(self, value: float, timestamp: float) -> float:
+        if self.last_time is None:
+            self.last_time = timestamp
+            return self.signal_filter.apply(value, 1.0)
+
+        dt = max(timestamp - self.last_time, 1e-6)
+        self.last_time = timestamp
+        previous_value = self.signal_filter.value if self.signal_filter.value is not None else value
+        derivative = (value - previous_value) / dt
+        filtered_derivative = self.derivative_filter.apply(
+            derivative,
+            smoothing_factor(dt, self.d_cutoff),
+        )
+        cutoff = self.min_cutoff + self.beta * abs(filtered_derivative)
+        return self.signal_filter.apply(value, smoothing_factor(dt, cutoff))
+
+
+class PoseSmoother:
+    def __init__(self, config: TeleopConfig, initial_pose: list[int]) -> None:
+        self.config = config
+        self.previous_pose = list(initial_pose)
+        self.filters = [
+            OneEuroFilter(
+                min_cutoff=config.one_euro_min_cutoff,
+                beta=config.one_euro_beta,
+                d_cutoff=config.one_euro_d_cutoff,
+                initial_value=float(value),
+            )
+            for value in initial_pose
+        ]
+
+    def apply(self, mapped_pose: list[int], timestamp: float) -> list[int]:
+        if self.config.smoothing_mode in {"none", "off"}:
+            filtered_pose = list(mapped_pose)
+        elif self.config.smoothing_mode in {"ema", "exponential"}:
+            filtered_pose = smooth_pose(self.previous_pose, mapped_pose, self.config.smoothing_alpha)
+        elif self.config.smoothing_mode in {"one_euro", "1euro", "one-euro"}:
+            filtered_pose = [
+                clamp_int(filter_.apply(float(value), timestamp))
+                for filter_, value in zip(self.filters, mapped_pose)
+            ]
+        else:
+            raise SystemExit(f"Unsupported smoothing_mode: {self.config.smoothing_mode}")
+
+        if self.config.pose_deadband > 0:
+            filtered_pose = [
+                previous if abs(current - previous) <= self.config.pose_deadband else current
+                for previous, current in zip(self.previous_pose, filtered_pose)
+            ]
+
+        self.previous_pose = [clamp_int(value) for value in filtered_pose]
+        return list(self.previous_pose)
+
+
 def limit_delta(previous: Optional[list[int]], current: list[int], max_delta: int) -> list[int]:
     if previous is None or max_delta <= 0:
         return list(current)
@@ -318,6 +413,7 @@ def run(args: argparse.Namespace) -> None:
     interval = 1.0 / max(config.control_hz, 1.0)
     warned_missing: set[str] = set()
     previous_pose: Optional[list[int]] = open_pose_from_config(config)
+    pose_smoother = PoseSmoother(config, previous_pose)
     api = None
 
     if dry_run:
@@ -333,7 +429,7 @@ def run(args: argparse.Namespace) -> None:
                 print_glove(glove_values)
 
             mapped_pose = map_glove_to_pose(glove_values, config, warned_missing)
-            smoothed_pose = smooth_pose(previous_pose, mapped_pose, config.smoothing_alpha)
+            smoothed_pose = pose_smoother.apply(mapped_pose, cycle_started)
             pose = limit_delta(previous_pose, smoothed_pose, config.max_delta_per_cycle)
             previous_pose = pose
 

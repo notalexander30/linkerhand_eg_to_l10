@@ -1,10 +1,15 @@
 hand_joint: L10
 hand_type: left
 can: can0
-control_hz: 20
+control_hz: 60
 dry_run: true
-smoothing_alpha: 0.35
-max_delta_per_cycle: 12
+smoothing_mode: one_euro
+smoothing_alpha: 0.18
+one_euro_min_cutoff: 1.0
+one_euro_beta: 0.02
+one_euro_d_cutoff: 1.0
+pose_deadband: 1
+max_delta_per_cycle: 8
 motor_count: 10
 
 # Used on Ctrl+C in live mode. This is the left-hand "Open Hand" pose from
