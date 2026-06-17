@@ -28,15 +28,15 @@ BITRATE = "1000000"
 PRESETS_PATH = REPO_ROOT / "example" / "terminal_control" / "poses_l10.json"
 
 JOINT_NAMES = [
-    "Thumb Base",
-    "Thumb Side Swing",
-    "Index Base",
-    "Middle Base",
-    "Ring Base",
-    "Little Base",
-    "Index Side Swing",
-    "Ring Side Swing",
-    "Little Side Swing",
+    "Thumb CMC Pitch",
+    "Thumb Adduction/Abduction",
+    "Index Finger MCP Pitch",
+    "Middle Finger MCP Pitch",
+    "Ring Finger MCP Pitch",
+    "Pinky Finger MCP Pitch",
+    "Index Finger Adduction/Abduction",
+    "Ring Finger Adduction/Abduction",
+    "Pinky Finger Adduction/Abduction",
     "Thumb Rotation",
 ]
 

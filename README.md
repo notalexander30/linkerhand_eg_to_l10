@@ -293,6 +293,10 @@ Recommended starting values for the L10 glove bridge:
 
 ```yaml
 control_hz: 60
+hand_output_mode: normalized_255
+normalized_hand_open: 255
+normalized_hand_closed: 0
+send_interval_sec: 1.0
 motion_profile: responsive_1to1
 smoothing_mode: one_euro
 one_euro_min_cutoff: 2.0
@@ -301,6 +305,10 @@ one_euro_d_cutoff: 1.0
 pose_deadband: 0
 max_delta_per_cycle: 0
 ```
+
+`hand_output_mode: normalized_255` keeps the glove calibration open/close points, but makes every mapped L10 motor use a simple full-range set-state output: open maps to `255`, closed maps to `0`. This is the neatest mode when you want all joints to behave the same way.
+
+`send_interval_sec: 1.0` sends the current 10-value set-state style pose once per second. Use `send_interval_sec: 0.0` if you want live streaming every control loop.
 
 `motion_profile: responsive_1to1` makes the slave follow the mapped glove pose directly: no pose deadband and no per-cycle speed cap. Old auto-calibration files that do not have `motion_profile` use this responsive 1:1 behavior by default.
 
@@ -315,10 +323,16 @@ Too slow to close                -> keep max_delta_per_cycle: 0
 
 Avoid `--print-glove` and `--print-pose` during normal live control because terminal output can make motion feel less smooth.
 
-If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show these controls yet, add them without recalibrating:
+If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show these controls or the L10 reference joint names yet, add them without recalibrating:
 
 ```bash
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
+```
+
+For faster live streaming instead of one-second set-state snapshots:
+
+```bash
+python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --send-interval-sec 0.0
 ```
 
 ## GUI Control
@@ -360,16 +374,16 @@ Default mapping is raw angle mapping:
 Right glove sensors mapped to left L10 joints:
 
 ```text
-glove 0  -> L10 joint 0 Thumb Base
-glove 1  -> L10 joint 1 Thumb Side Swing
+glove 0  -> L10 joint 0 Thumb CMC Pitch
+glove 1  -> L10 joint 1 Thumb Adduction/Abduction
 glove 2  -> L10 joint 9 Thumb Rotation
-glove 3  -> L10 joint 2 Index Base
-glove 4  -> L10 joint 6 Index Side Swing
-glove 6  -> L10 joint 3 Middle Base
-glove 9  -> L10 joint 4 Ring Base
-glove 10 -> L10 joint 7 Ring Side Swing
-glove 12 -> L10 joint 5 Little Base
-glove 13 -> L10 joint 8 Little Side Swing
+glove 3  -> L10 joint 2 Index Finger MCP Pitch
+glove 4  -> L10 joint 6 Index Finger Adduction/Abduction
+glove 6  -> L10 joint 3 Middle Finger MCP Pitch
+glove 9  -> L10 joint 4 Ring Finger MCP Pitch
+glove 10 -> L10 joint 7 Ring Finger Adduction/Abduction
+glove 12 -> L10 joint 5 Pinky Finger MCP Pitch
+glove 13 -> L10 joint 8 Pinky Finger Adduction/Abduction
 ```
 
 Ignored glove sensors:
@@ -380,15 +394,15 @@ Ignored glove sensors:
 
 L10 joint order:
 
-1. Thumb Base
-2. Thumb Side Swing
-3. Index Base
-4. Middle Base
-5. Ring Base
-6. Little Base
-7. Index Side Swing
-8. Ring Side Swing
-9. Little Side Swing
+1. Thumb CMC Pitch
+2. Thumb Adduction/Abduction
+3. Index Finger MCP Pitch
+4. Middle Finger MCP Pitch
+5. Ring Finger MCP Pitch
+6. Pinky Finger MCP Pitch
+7. Index Finger Adduction/Abduction
+8. Ring Finger Adduction/Abduction
+9. Pinky Finger Adduction/Abduction
 10. Thumb Rotation
 
 ## Optional Calibrated Mode

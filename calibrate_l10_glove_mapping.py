@@ -30,6 +30,7 @@ sys.path.insert(0, str(REPO_ROOT))
 from control_l10_left_from_eg_glove import (  # noqa: E402
     DEFAULT_CAN,
     DEFAULT_CONFIG,
+    L10_JOINT_NAMES,
     GloveReader,
     TeleopConfig,
     clamp_int,
@@ -61,29 +62,18 @@ SENSOR_KEYS = [
 
 SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SENSOR_KEYS)}
 
-MOTOR_NAMES = {
-    0: "Thumb Base",
-    1: "Thumb Side Swing",
-    2: "Index Base",
-    3: "Middle Base",
-    4: "Ring Base",
-    5: "Pinky Base",
-    6: "Index Side Swing",
-    7: "Ring Side Swing",
-    8: "Pinky Side Swing",
-    9: "Thumb Rotation",
-}
+MOTOR_NAMES = {index: name for index, name in enumerate(L10_JOINT_NAMES)}
 
 MOTOR_PROMPTS = {
-    0: "Bend only the RIGHT thumb base joint from open toward closed.",
-    1: "Move only the RIGHT thumb side/swing motion.",
-    2: "Bend only the RIGHT index finger.",
-    3: "Bend only the RIGHT middle finger.",
-    4: "Bend only the RIGHT ring finger.",
-    5: "Bend only the RIGHT pinky finger.",
-    6: "Move the RIGHT index side/splay motion if the glove exposes it.",
-    7: "Move the RIGHT ring side/splay motion if the glove exposes it.",
-    8: "Move the RIGHT pinky side/splay motion if the glove exposes it.",
+    0: "Bend only the RIGHT thumb CMC pitch from open toward closed.",
+    1: "Move only the RIGHT thumb adduction/abduction motion.",
+    2: "Bend only the RIGHT index MCP pitch.",
+    3: "Bend only the RIGHT middle MCP pitch.",
+    4: "Bend only the RIGHT ring MCP pitch.",
+    5: "Bend only the RIGHT pinky MCP pitch.",
+    6: "Move the RIGHT index adduction/abduction motion if the glove exposes it.",
+    7: "Move the RIGHT ring adduction/abduction motion if the glove exposes it.",
+    8: "Move the RIGHT pinky adduction/abduction motion if the glove exposes it.",
     9: "Rotate or oppose the RIGHT thumb, whichever changes the glove thumb rotation sensor.",
 }
 
@@ -234,6 +224,7 @@ def build_output_config(
             {
                 "name": channel.name,
                 "glove_key": match.glove_key,
+                "l10_joint_name": MOTOR_NAMES.get(channel.motor_index, channel.name),
                 "source_sensor_index": SENSOR_INDEX_BY_KEY.get(match.glove_key),
                 "motor_index": channel.motor_index,
                 "glove_open": round(match.glove_open, 5),
@@ -253,6 +244,10 @@ def build_output_config(
         "can": args.can,
         "control_hz": template.control_hz,
         "dry_run": True,
+        "hand_output_mode": template.hand_output_mode,
+        "normalized_hand_open": template.normalized_hand_open,
+        "normalized_hand_closed": template.normalized_hand_closed,
+        "send_interval_sec": template.send_interval_sec,
         "motion_profile": template.motion_profile,
         "smoothing_mode": template.smoothing_mode,
         "smoothing_alpha": template.smoothing_alpha,

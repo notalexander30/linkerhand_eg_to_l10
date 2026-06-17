@@ -7,6 +7,15 @@ can: can0
 control_hz: 60
 # dry_run: true prints poses only; use --no-dry-run to move the hand.
 dry_run: true
+# hand_output_mode: normalized_255 maps every calibrated glove open/close pair to 255..0.
+# Use "calibrated" if you want each channel's hand_open and hand_closed values instead.
+hand_output_mode: normalized_255
+# normalized_hand_open/closed: full-range set-state values used in normalized_255 mode.
+normalized_hand_open: 255
+normalized_hand_closed: 0
+# send_interval_sec: 1.0 sends a set-state style snapshot once per second.
+# Set 0.0 to send every control loop for fastest live teleoperation.
+send_interval_sec: 1.0
 # motion_profile: responsive_1to1 ignores max_delta_per_cycle for fastest following.
 # Use "safe" if you want max_delta_per_cycle to slow sudden jumps.
 motion_profile: responsive_1to1
@@ -29,7 +38,7 @@ motor_count: 10
 
 # Used on Ctrl+C in live mode. This is the left-hand "Open Hand" pose from
 # LinkerHand/config/L10_positions.yaml.
-safe_exit_pose: [255, 70, 255, 255, 255, 255, 255, 255, 255, 255]
+safe_exit_pose: [255, 255, 255, 255, 255, 255, 128, 67, 89, 255]
 
 glove_reader:
   # The existing repo has serial parsing in glove_to_l10.py for KTH5702 text
@@ -44,8 +53,9 @@ glove_reader:
 # hand_open and hand_closed are seeded from the repo's L10 Open Hand and Fist
 # poses. For the main flexion motors this confirms 255=open and 0=closed.
 channels:
-  - name: thumb_0
+  - name: thumb_cmc_pitch
     glove_key: thumb_0
+    l10_joint_name: Thumb CMC Pitch
     motor_index: 0
     glove_open: 0
     glove_closed: 1000
@@ -54,18 +64,20 @@ channels:
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: thumb_1
+  - name: thumb_adduction_abduction
     glove_key: thumb_1
+    l10_joint_name: Thumb Adduction/Abduction
     motor_index: 1
     glove_open: 0
     glove_closed: 1000
-    hand_open: 70
+    hand_open: 255
     hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: index_0
+  - name: index_finger_mcp_pitch
     glove_key: index_0
+    l10_joint_name: Index Finger MCP Pitch
     motor_index: 2
     glove_open: 0
     glove_closed: 1000
@@ -74,8 +86,9 @@ channels:
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: middle_0
+  - name: middle_finger_mcp_pitch
     glove_key: middle_0
+    l10_joint_name: Middle Finger MCP Pitch
     motor_index: 3
     glove_open: 0
     glove_closed: 1000
@@ -84,8 +97,9 @@ channels:
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: ring_0
+  - name: ring_finger_mcp_pitch
     glove_key: ring_0
+    l10_joint_name: Ring Finger MCP Pitch
     motor_index: 4
     glove_open: 0
     glove_closed: 1000
@@ -94,8 +108,9 @@ channels:
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: pinky_0
+  - name: pinky_finger_mcp_pitch
     glove_key: pinky_0
+    l10_joint_name: Pinky Finger MCP Pitch
     motor_index: 5
     glove_open: 0
     glove_closed: 1000
@@ -104,38 +119,42 @@ channels:
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: index_1
+  - name: index_finger_adduction_abduction
     glove_key: index_1
+    l10_joint_name: Index Finger Adduction/Abduction
     motor_index: 6
     glove_open: 0
     glove_closed: 1000
-    hand_open: 255
+    hand_open: 128
     hand_closed: 128
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: ring_1
+  - name: ring_finger_adduction_abduction
     glove_key: ring_1
+    l10_joint_name: Ring Finger Adduction/Abduction
     motor_index: 7
     glove_open: 0
     glove_closed: 1000
-    hand_open: 255
+    hand_open: 67
     hand_closed: 67
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: pinky_1
+  - name: pinky_finger_adduction_abduction
     glove_key: pinky_1
+    l10_joint_name: Pinky Finger Adduction/Abduction
     motor_index: 8
     glove_open: 0
     glove_closed: 1000
-    hand_open: 255
+    hand_open: 89
     hand_closed: 89
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
-  - name: thumb_2
+  - name: thumb_rotation
     glove_key: thumb_2
+    l10_joint_name: Thumb Rotation
     motor_index: 9
     glove_open: 0
     glove_closed: 1000

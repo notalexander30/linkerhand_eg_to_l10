@@ -31,7 +31,7 @@ import linkerhand_l10_sdk as sdk  # noqa: E402
 DEFAULT_CALIBRATION = REPO_ROOT / "glove_l10_calibration.json"
 SENSOR_COUNT = 15
 ANGLE_MAX = 360.0
-OPEN_POSE = [255, 70, 255, 255, 255, 255, 255, 255, 255, 255]
+OPEN_POSE = [255, 255, 255, 255, 255, 255, 128, 67, 89, 255]
 FIST_POSE = [90, 0, 0, 0, 0, 0, 128, 67, 89, 197]
 
 ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
@@ -46,25 +46,25 @@ FINGER_GROUPS = {
 
 POSE_GROUPS = {
     "thumb": [0, 1, 9],
-    "index": [2, 6],
+    "index": [2],
     "middle": [3],
-    "ring": [4, 7],
-    "little": [5, 8],
+    "ring": [4],
+    "little": [5],
 }
 
 FINGER_NAMES = ["index", "middle", "ring", "little"]
 
 ANGLE_SENSOR_TO_L10_JOINT = {
-    0: 0,   # right glove thumb sensor 0 -> left L10 Thumb Base
-    1: 1,   # right glove thumb sensor 1 -> left L10 Thumb Side Swing
+    0: 0,   # right glove thumb sensor 0 -> left L10 Thumb CMC Pitch
+    1: 1,   # right glove thumb sensor 1 -> left L10 Thumb Adduction/Abduction
     2: 9,   # right glove thumb sensor 2 -> left L10 Thumb Rotation
-    3: 2,   # right glove index sensor 0 -> left L10 Index Base
-    4: 6,   # right glove index sensor 1 -> left L10 Index Side Swing
-    6: 3,   # right glove middle sensor 0 -> left L10 Middle Base
-    9: 4,   # right glove ring sensor 0 -> left L10 Ring Base
-    10: 7,  # right glove ring sensor 1 -> left L10 Ring Side Swing
-    12: 5,  # right glove little sensor 0 -> left L10 Little Base
-    13: 8,  # right glove little sensor 1 -> left L10 Little Side Swing
+    3: 2,   # right glove index sensor 0 -> left L10 Index Finger MCP Pitch
+    4: 6,   # right glove index sensor 1 -> left L10 Index Finger Adduction/Abduction
+    6: 3,   # right glove middle sensor 0 -> left L10 Middle Finger MCP Pitch
+    9: 4,   # right glove ring sensor 0 -> left L10 Ring Finger MCP Pitch
+    10: 7,  # right glove ring sensor 1 -> left L10 Ring Finger Adduction/Abduction
+    12: 5,  # right glove little sensor 0 -> left L10 Pinky Finger MCP Pitch
+    13: 8,  # right glove little sensor 1 -> left L10 Pinky Finger Adduction/Abduction
 }
 
 IGNORED_GLOVE_SENSORS = [5, 7, 8, 11, 14]

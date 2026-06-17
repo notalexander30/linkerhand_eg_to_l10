@@ -28,6 +28,18 @@ sys.path.insert(0, str(REPO_ROOT))
 
 DEFAULT_CONFIG = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.yaml"
 DEFAULT_CAN = "can0"
+L10_JOINT_NAMES = [
+    "Thumb CMC Pitch",
+    "Thumb Adduction/Abduction",
+    "Index Finger MCP Pitch",
+    "Middle Finger MCP Pitch",
+    "Ring Finger MCP Pitch",
+    "Pinky Finger MCP Pitch",
+    "Index Finger Adduction/Abduction",
+    "Ring Finger Adduction/Abduction",
+    "Pinky Finger Adduction/Abduction",
+    "Thumb Rotation",
+]
 SERIAL_SENSOR_KEYS = [
     "thumb_0",
     "thumb_1",
@@ -58,6 +70,7 @@ class ChannelMapping:
     glove_closed: float
     hand_open: int
     hand_closed: int
+    l10_joint_name: str = ""
     invert: bool = False
     gain: float = 1.0
 
@@ -72,6 +85,10 @@ class TeleopConfig:
     control_hz: float
     dry_run: bool
     motion_profile: str
+    hand_output_mode: str
+    normalized_hand_open: int
+    normalized_hand_closed: int
+    send_interval_sec: float
     smoothing_mode: str
     smoothing_alpha: float
     one_euro_min_cutoff: float
@@ -113,14 +130,18 @@ def parse_channel(raw: Mapping[str, Any]) -> ChannelMapping:
     if missing:
         raise ValueError(f"channel is missing required keys: {', '.join(missing)}")
 
+    motor_index = int(raw["motor_index"])
+    default_joint_name = L10_JOINT_NAMES[motor_index] if 0 <= motor_index < len(L10_JOINT_NAMES) else str(raw["name"])
+
     return ChannelMapping(
         name=str(raw["name"]),
         glove_key=str(raw["glove_key"]),
-        motor_index=int(raw["motor_index"]),
+        motor_index=motor_index,
         glove_open=float(raw["glove_open"]),
         glove_closed=float(raw["glove_closed"]),
         hand_open=clamp_int(float(raw["hand_open"])),
         hand_closed=clamp_int(float(raw["hand_closed"])),
+        l10_joint_name=str(raw.get("l10_joint_name", default_joint_name)),
         invert=bool(raw.get("invert", False)),
         gain=max(0.0, float(raw.get("gain", raw.get("multiplier", 1.0)))),
     )
@@ -172,6 +193,10 @@ def load_config(path: Path) -> TeleopConfig:
         control_hz=float(raw.get("control_hz", 60)),
         dry_run=bool(raw.get("dry_run", True)),
         motion_profile=motion_profile,
+        hand_output_mode=str(raw.get("hand_output_mode", "normalized_255")).lower(),
+        normalized_hand_open=clamp_int(float(raw.get("normalized_hand_open", 255))),
+        normalized_hand_closed=clamp_int(float(raw.get("normalized_hand_closed", 0))),
+        send_interval_sec=max(0.0, float(raw.get("send_interval_sec", 1.0))),
         smoothing_mode=str(raw.get("smoothing_mode", "one_euro")).lower(),
         smoothing_alpha=clamp(float(raw.get("smoothing_alpha", 1.0)), 0.0, 1.0),
         one_euro_min_cutoff=max(0.001, float(raw.get("one_euro_min_cutoff", 2.0))),
@@ -247,7 +272,15 @@ class GloveReader:
             yield frame
 
 
-def map_channel(value: float, channel: ChannelMapping) -> int:
+def hand_range_for_channel(channel: ChannelMapping, config: TeleopConfig) -> tuple[int, int]:
+    """Choose the L10 open/closed output range for this channel."""
+
+    if config.hand_output_mode in {"normalized_255", "full_range_255", "state_255"}:
+        return config.normalized_hand_open, config.normalized_hand_closed
+    return channel.hand_open, channel.hand_closed
+
+
+def map_channel(value: float, channel: ChannelMapping, config: TeleopConfig) -> int:
     """Convert one raw glove value into one L10 motor value using calibration plus gain."""
 
     normalized = (value - channel.glove_open) / (channel.glove_closed - channel.glove_open)
@@ -255,7 +288,8 @@ def map_channel(value: float, channel: ChannelMapping) -> int:
     if channel.invert:
         normalized = 1.0 - normalized
     normalized = clamp(normalized * channel.gain, 0.0, 1.0)
-    hand_value = channel.hand_open + normalized * (channel.hand_closed - channel.hand_open)
+    hand_open, hand_closed = hand_range_for_channel(channel, config)
+    hand_value = hand_open + normalized * (hand_closed - hand_open)
     return clamp_int(hand_value)
 
 
@@ -264,7 +298,8 @@ def open_pose_from_config(config: TeleopConfig) -> list[int]:
 
     pose = [255] * config.motor_count
     for channel in config.channels:
-        pose[channel.motor_index] = clamp_int(channel.hand_open)
+        hand_open, _hand_closed = hand_range_for_channel(channel, config)
+        pose[channel.motor_index] = clamp_int(hand_open)
     return pose
 
 
@@ -280,13 +315,13 @@ def map_glove_to_pose(
         if channel.glove_key not in glove_values:
             if channel.glove_key not in warned_missing:
                 print(
-                    f"Warning: missing glove key '{channel.glove_key}' for channel "
-                    f"'{channel.name}'. Using hand_open={channel.hand_open}.",
+                    f"Warning: missing glove key '{channel.glove_key}' for "
+                    f"{channel.l10_joint_name}. Using hand_open={channel.hand_open}.",
                     file=sys.stderr,
                 )
                 warned_missing.add(channel.glove_key)
             continue
-        pose[channel.motor_index] = map_channel(float(glove_values[channel.glove_key]), channel)
+        pose[channel.motor_index] = map_channel(float(glove_values[channel.glove_key]), channel, config)
     return [clamp_int(value) for value in pose]
 
 
@@ -426,7 +461,7 @@ def connect_hand(config: TeleopConfig):
 
 
 def send_pose(api: Any, pose: list[int]) -> None:
-    """Send the final 10-value pose through LinkerHandApi.finger_move()."""
+    """Send the final 10-value set-state style pose through LinkerHandApi.finger_move()."""
 
     api.finger_move(pose=pose)
 
@@ -441,7 +476,8 @@ def print_glove(values: Mapping[str, float]) -> None:
 def print_pose(pose: Iterable[int]) -> None:
     """Debug print for final L10 pose; avoid during live control for smoother timing."""
 
-    print(f"pose {[int(value) for value in pose]}")
+    values = [int(value) for value in pose]
+    print(f"pose {values}")
 
 
 def run(args: argparse.Namespace) -> None:
@@ -469,6 +505,7 @@ def run(args: argparse.Namespace) -> None:
     warned_missing: set[str] = set()
     previous_pose: Optional[list[int]] = open_pose_from_config(config)
     pose_smoother = PoseSmoother(config, previous_pose)
+    last_send_time: Optional[float] = None
     api = None
 
     if dry_run:
@@ -488,10 +525,17 @@ def run(args: argparse.Namespace) -> None:
             pose = limit_delta(previous_pose, smoothed_pose, config.max_delta_per_cycle)
             previous_pose = pose
 
-            if args.print_pose or dry_run:
-                print_pose(pose)
-            if api is not None:
-                send_pose(api, pose)
+            send_due = (
+                config.send_interval_sec <= 0.0
+                or last_send_time is None
+                or cycle_started - last_send_time >= config.send_interval_sec
+            )
+            if send_due:
+                last_send_time = cycle_started
+                if args.print_pose or dry_run:
+                    print_pose(pose)
+                if api is not None:
+                    send_pose(api, pose)
 
             elapsed = time.monotonic() - cycle_started
             time.sleep(max(0.0, interval - elapsed))

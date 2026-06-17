@@ -11,6 +11,8 @@ import argparse
 from pathlib import Path
 from typing import Any
 
+from control_l10_left_from_eg_glove import L10_JOINT_NAMES
+
 
 DEFAULT_CONFIG = Path("config/l10_left_eg_glove_mapping.auto.yaml")
 
@@ -41,6 +43,10 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
     """Set the speed/smoothing fields while keeping calibration channels unchanged."""
 
     data["control_hz"] = args.control_hz
+    data["hand_output_mode"] = args.hand_output_mode
+    data["normalized_hand_open"] = args.normalized_hand_open
+    data["normalized_hand_closed"] = args.normalized_hand_closed
+    data["send_interval_sec"] = args.send_interval_sec
     data["motion_profile"] = args.motion_profile
     data["smoothing_mode"] = args.smoothing_mode
     data["smoothing_alpha"] = args.smoothing_alpha
@@ -49,6 +55,10 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
     data["one_euro_d_cutoff"] = args.one_euro_d_cutoff
     data["pose_deadband"] = args.pose_deadband
     data["max_delta_per_cycle"] = args.max_delta_per_cycle
+    for channel in data.get("channels", []):
+        motor_index = int(channel.get("motor_index", -1))
+        if 0 <= motor_index < len(L10_JOINT_NAMES):
+            channel["l10_joint_name"] = L10_JOINT_NAMES[motor_index]
     return data
 
 
@@ -58,6 +68,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Expose motion controls in an existing L10 glove YAML.")
     parser.add_argument("--config", type=Path, default=DEFAULT_CONFIG, help="Mapping YAML to update.")
     parser.add_argument("--control-hz", type=float, default=60.0, help="Command loop rate.")
+    parser.add_argument(
+        "--hand-output-mode",
+        choices=["normalized_255", "calibrated"],
+        default="normalized_255",
+        help="normalized_255 maps every joint to the same 255=open, 0=closed range.",
+    )
+    parser.add_argument("--normalized-hand-open", type=int, default=255, help="Open command in normalized_255 mode.")
+    parser.add_argument("--normalized-hand-closed", type=int, default=0, help="Closed command in normalized_255 mode.")
+    parser.add_argument("--send-interval-sec", type=float, default=1.0, help="1.0 sends a set-state snapshot every second; 0.0 sends every loop.")
     parser.add_argument(
         "--motion-profile",
         choices=["responsive_1to1", "safe"],
