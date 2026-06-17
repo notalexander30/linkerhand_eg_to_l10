@@ -72,7 +72,8 @@ channels:
     glove_closed: 1000
     hand_open: 255
     hand_closed: 0
-    invert: false
+    # invert: true mirrors right-glove thumb side motion onto the left hand.
+    invert: true
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_mcp_pitch

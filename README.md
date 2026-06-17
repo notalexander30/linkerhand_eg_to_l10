@@ -335,6 +335,20 @@ For faster live streaming instead of one-second set-state snapshots:
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --send-interval-sec 0.0
 ```
 
+Mirror the right-glove thumb adduction/abduction onto the left hand:
+
+```bash
+python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --mirror-thumb-abduction
+```
+
+Recalibrate only the index finger channels in your existing auto YAML:
+
+```bash
+python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --motors 2 6 --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
+```
+
+Motor `2` is Index Finger MCP Pitch. Motor `6` is Index Finger Adduction/Abduction. If only index bend is wrong, use `--motors 2`.
+
 ## GUI Control
 
 Start the GUI:

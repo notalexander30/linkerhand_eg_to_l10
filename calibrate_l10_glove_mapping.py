@@ -211,70 +211,108 @@ def write_yaml(path: Path, data: Mapping[str, Any]) -> None:
     print(f"Wrote calibrated mapping: {path}")
 
 
+def load_yaml_dict(path: Path) -> dict[str, Any]:
+    try:
+        import yaml
+    except ImportError as exc:
+        raise SystemExit("Missing PyYAML. Install dependencies with: python3 -m pip install -r requirements.txt") from exc
+
+    with path.open("r", encoding="utf-8") as file:
+        return yaml.safe_load(file) or {}
+
+
+def channel_to_output(channel, args: argparse.Namespace) -> dict[str, Any]:
+    return {
+        "name": channel.name,
+        "glove_key": channel.glove_key,
+        "l10_joint_name": MOTOR_NAMES.get(channel.motor_index, channel.name),
+        "motor_index": channel.motor_index,
+        "glove_open": channel.glove_open,
+        "glove_closed": channel.glove_closed,
+        "hand_open": channel.hand_open,
+        "hand_closed": channel.hand_closed,
+        "invert": channel.invert,
+        "gain": float(args.gain),
+    }
+
+
 def build_output_config(
     template: TeleopConfig,
     matches: Iterable[SensorMatch],
     args: argparse.Namespace,
+    existing_data: Optional[dict[str, Any]] = None,
 ) -> dict[str, Any]:
     matches_by_motor = {match.motor_index: match for match in matches}
+    data: dict[str, Any] = dict(existing_data or {})
+    existing_channels = {
+        int(channel["motor_index"]): dict(channel)
+        for channel in data.get("channels", [])
+        if "motor_index" in channel
+    }
+
     channels = []
     for channel in template.channels:
-        match = matches_by_motor[channel.motor_index]
-        channels.append(
-            {
-                "name": channel.name,
-                "glove_key": match.glove_key,
-                "l10_joint_name": MOTOR_NAMES.get(channel.motor_index, channel.name),
-                "source_sensor_index": SENSOR_INDEX_BY_KEY.get(match.glove_key),
-                "motor_index": channel.motor_index,
-                "glove_open": round(match.glove_open, 5),
-                "glove_closed": round(match.glove_closed, 5),
-                "hand_open": channel.hand_open,
-                "hand_closed": channel.hand_closed,
-                "invert": False,
-                "gain": float(args.gain),
-                "match_delta": round(match.delta, 5),
-                "match_confidence": round(match.confidence, 3),
-            }
-        )
+        output_channel = existing_channels.get(channel.motor_index, channel_to_output(channel, args))
+        output_channel["name"] = channel.name
+        output_channel["l10_joint_name"] = MOTOR_NAMES.get(channel.motor_index, channel.name)
+        output_channel["motor_index"] = channel.motor_index
+        output_channel.setdefault("hand_open", channel.hand_open)
+        output_channel.setdefault("hand_closed", channel.hand_closed)
+        output_channel.setdefault("invert", channel.invert)
+        output_channel.setdefault("gain", float(args.gain))
 
-    return {
-        "hand_joint": template.hand_joint,
-        "hand_type": template.hand_type,
-        "can": args.can,
-        "control_hz": template.control_hz,
-        "dry_run": True,
-        "hand_output_mode": template.hand_output_mode,
-        "normalized_hand_open": template.normalized_hand_open,
-        "normalized_hand_closed": template.normalized_hand_closed,
-        "send_interval_sec": template.send_interval_sec,
-        "motion_profile": template.motion_profile,
-        "smoothing_mode": template.smoothing_mode,
-        "smoothing_alpha": template.smoothing_alpha,
-        "one_euro_min_cutoff": template.one_euro_min_cutoff,
-        "one_euro_beta": template.one_euro_beta,
-        "one_euro_d_cutoff": template.one_euro_d_cutoff,
-        "pose_deadband": template.pose_deadband,
-        "max_delta_per_cycle": template.max_delta_per_cycle,
-        "motor_count": template.motor_count,
-        "safe_exit_pose": template.safe_exit_pose or open_pose_from_config(template),
-        "glove_reader": {
-            "mode": "serial",
-            "port": args.glove_port,
-            "baud": args.baud,
-        },
-        "metadata": {
+        match = matches_by_motor.get(channel.motor_index)
+        if match is not None:
+            output_channel["glove_key"] = match.glove_key
+            output_channel["source_sensor_index"] = SENSOR_INDEX_BY_KEY.get(match.glove_key)
+            output_channel["glove_open"] = round(match.glove_open, 5)
+            output_channel["glove_closed"] = round(match.glove_closed, 5)
+            output_channel["match_delta"] = round(match.delta, 5)
+            output_channel["match_confidence"] = round(match.confidence, 3)
+
+        channels.append(output_channel)
+
+    data["hand_joint"] = template.hand_joint
+    data["hand_type"] = template.hand_type
+    data["can"] = args.can
+    data["control_hz"] = template.control_hz
+    data["dry_run"] = True
+    data["hand_output_mode"] = template.hand_output_mode
+    data["normalized_hand_open"] = template.normalized_hand_open
+    data["normalized_hand_closed"] = template.normalized_hand_closed
+    data["send_interval_sec"] = template.send_interval_sec
+    data["motion_profile"] = template.motion_profile
+    data["smoothing_mode"] = template.smoothing_mode
+    data["smoothing_alpha"] = template.smoothing_alpha
+    data["one_euro_min_cutoff"] = template.one_euro_min_cutoff
+    data["one_euro_beta"] = template.one_euro_beta
+    data["one_euro_d_cutoff"] = template.one_euro_d_cutoff
+    data["pose_deadband"] = template.pose_deadband
+    data["max_delta_per_cycle"] = template.max_delta_per_cycle
+    data["motor_count"] = template.motor_count
+    data["safe_exit_pose"] = template.safe_exit_pose or open_pose_from_config(template)
+    data["glove_reader"] = {
+        "mode": "serial",
+        "port": args.glove_port,
+        "baud": args.baud,
+    }
+    metadata = dict(data.get("metadata", {}))
+    metadata.update(
+        {
             "generated_by": "calibrate_l10_glove_mapping.py",
             "open_pose_command": args.open_pose,
             "samples_per_step": args.samples,
             "allow_duplicate_sensors": args.allow_duplicate_sensors,
+            "updated_motors": sorted(matches_by_motor),
             "notes": (
                 "Right glove maps to left L10 by anatomical finger name. "
                 "Use gain as the master-to-slave movement multiplier."
             ),
-        },
-        "channels": channels,
-    }
+        }
+    )
+    data["metadata"] = metadata
+    data["channels"] = channels
+    return data
 
 
 def print_match(match: SensorMatch) -> None:
@@ -291,6 +329,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Interactive 15-DOF glove to 10-DOF L10 mapping calibration.")
     parser.add_argument("--template", type=Path, default=DEFAULT_CONFIG, help="Existing mapping config to use as a template.")
     parser.add_argument("--output", type=Path, default=DEFAULT_OUTPUT, help="Generated YAML config path.")
+    parser.add_argument("--update-config", type=Path, default=None, help="Read and write this existing YAML in place.")
+    parser.add_argument("--motors", nargs="+", type=int, default=None, help="Only recalibrate these L10 motor indexes.")
     parser.add_argument("--glove-port", default="/dev/ttyUSB0", help="USB serial port for the glove.")
     parser.add_argument("--baud", type=int, default=115200, help="Glove serial baud rate.")
     parser.add_argument("--can", default=DEFAULT_CAN, help="SocketCAN channel for the L10.")
@@ -328,10 +368,22 @@ def main(argv: Optional[list[str]] = None) -> None:
         raise SystemExit("--samples must be at least 1.")
     if args.gain < 0:
         raise SystemExit("--gain must be 0 or greater.")
+    if args.update_config is not None:
+        args.template = args.update_config
+        args.output = args.update_config
     dry_run = not args.no_dry_run
 
     template = load_config(args.template)
     template = TeleopConfig(**{**template.__dict__, "can": args.can})
+    existing_data = load_yaml_dict(args.template) if args.template.exists() else None
+    selected_motors = (
+        {channel.motor_index for channel in template.channels}
+        if args.motors is None
+        else set(args.motors)
+    )
+    unknown_motors = selected_motors - {channel.motor_index for channel in template.channels}
+    if unknown_motors:
+        raise SystemExit(f"Unknown motor indexes: {sorted(unknown_motors)}")
     open_pose = select_open_pose(template, args.open_pose)
     reader = build_reader(args, template)
     frame_iter = reader.frames()
@@ -352,7 +404,15 @@ def main(argv: Optional[list[str]] = None) -> None:
 
         matches: list[SensorMatch] = []
         used_sensors: set[str] = set()
+        if not args.allow_duplicate_sensors:
+            used_sensors = {
+                channel.glove_key
+                for channel in template.channels
+                if channel.motor_index not in selected_motors
+            }
         for channel in template.channels:
+            if channel.motor_index not in selected_motors:
+                continue
             motor_name = MOTOR_NAMES.get(channel.motor_index, channel.name)
             prompt = MOTOR_PROMPTS.get(channel.motor_index, f"Move glove DOF for {motor_name}.")
             wait_for_enter(
@@ -380,7 +440,7 @@ def main(argv: Optional[list[str]] = None) -> None:
             )
             time.sleep(max(0.0, args.settle))
 
-        output = build_output_config(template, matches, args)
+        output = build_output_config(template, matches, args, existing_data=existing_data)
         write_yaml(args.output, output)
         print("\nNext dry-run test:")
         print(

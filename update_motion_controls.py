@@ -59,6 +59,12 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
         motor_index = int(channel.get("motor_index", -1))
         if 0 <= motor_index < len(L10_JOINT_NAMES):
             channel["l10_joint_name"] = L10_JOINT_NAMES[motor_index]
+        if args.mirror_thumb_abduction and motor_index == 1:
+            channel["invert"] = True
+        if motor_index in args.invert_motor:
+            channel["invert"] = True
+        if motor_index in args.uninvert_motor:
+            channel["invert"] = False
     return data
 
 
@@ -90,6 +96,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--one-euro-d-cutoff", type=float, default=1.0, help="Usually leave at 1.0.")
     parser.add_argument("--pose-deadband", type=int, default=0, help="0 gives most 1:1 response.")
     parser.add_argument("--max-delta-per-cycle", type=int, default=0, help="0 means no speed cap.")
+    parser.add_argument(
+        "--mirror-thumb-abduction",
+        action="store_true",
+        help="Invert motor 1 so right-glove thumb side motion mirrors on the left L10.",
+    )
+    parser.add_argument("--invert-motor", action="append", type=int, default=[], help="Set invert: true for this L10 motor index.")
+    parser.add_argument("--uninvert-motor", action="append", type=int, default=[], help="Set invert: false for this L10 motor index.")
     return parser
 
 
