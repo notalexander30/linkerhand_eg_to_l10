@@ -6,9 +6,9 @@ This script keeps the LinkerHand SDK as the only hand-control path:
     LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")
     api.finger_move(pose=[...10 values...])
 
-The glove side is right and the hand side is left. This tested EG glove reports
-raw sensors 3..5 as pinky and 12..14 as index, so the code fixes that raw order
-before YAML maps logical glove names to the 10 L10 motors.
+The glove side is right and the hand side is left. The raw EG sensor names stay
+stable, while the YAML corrects the tested physical finger offset before sending
+the 10-value pose to the L10.
 """
 
 from __future__ import annotations
@@ -44,34 +44,23 @@ SERIAL_SENSOR_KEYS = [
     "thumb_0",
     "thumb_1",
     "thumb_2",
-    # This right-hand EG glove reports the outside fingers in the opposite raw
-    # order: raw sensors 3..5 are pinky, and raw sensors 12..14 are index.
-    "pinky_0",
-    "pinky_1",
-    "pinky_2",
+    # Linker EG exposes 15 sensors: 3 per finger in anatomical order.
+    # The EG manual describes the three per-finger channels as side swing,
+    # root/base motion, and fingertip motion; the exact channel-to-joint choice
+    # is kept in YAML so it can be re-captured without code edits.
+    "index_0",
+    "index_1",
+    "index_2",
     "middle_0",
     "middle_1",
     "middle_2",
     "ring_0",
     "ring_1",
     "ring_2",
-    "index_0",
-    "index_1",
-    "index_2",
+    "pinky_0",
+    "pinky_1",
+    "pinky_2",
 ]
-REFERENCE_GLOVE_KEYS_BY_MOTOR = {
-    0: "thumb_2",
-    1: "thumb_1",
-    2: "index_1",
-    3: "middle_1",
-    4: "ring_1",
-    5: "pinky_1",
-    6: "index_0",
-    7: "ring_0",
-    8: "pinky_0",
-    9: "thumb_0",
-}
-SOURCE_SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
 
 
 @dataclass(frozen=True)
@@ -170,18 +159,6 @@ def parse_channel(raw: Mapping[str, Any]) -> ChannelMapping:
     )
 
 
-def apply_reference_mapping(data: dict[str, Any]) -> None:
-    """Repair stale YAML glove_key values to the tested EG-to-L10 logical map."""
-
-    for channel in data.get("channels", []):
-        motor_index = int(channel.get("motor_index", -1))
-        glove_key = REFERENCE_GLOVE_KEYS_BY_MOTOR.get(motor_index)
-        if glove_key is None:
-            continue
-        channel["glove_key"] = glove_key
-        channel["source_sensor_index"] = SOURCE_SENSOR_INDEX_BY_KEY[glove_key]
-
-
 def load_config(path: Path) -> TeleopConfig:
     """Load YAML controls; motion_profile decides fast 1:1 mode versus capped safe mode."""
 
@@ -192,9 +169,6 @@ def load_config(path: Path) -> TeleopConfig:
 
     with path.open("r", encoding="utf-8") as file:
         raw = yaml.safe_load(file) or {}
-
-    if bool(raw.get("apply_reference_mapping", True)):
-        apply_reference_mapping(raw)
 
     channels = [parse_channel(item) for item in raw.get("channels", [])]
     motor_count = int(raw.get("motor_count", 10))
