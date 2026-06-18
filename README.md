@@ -1,150 +1,62 @@
 # LinkerHand EG To L10
 
-Terminal and GUI control for using a right EG/KTH5702 USB glove to control a left LinkerHand L10 on a Linux laptop.
+Right LinkerHand EG/KTH5702 USB glove teleoperation for a left LinkerHand L10.
 
 ```text
-Right EG glove -> USB serial -> laptop -> SocketCAN can0 -> left LinkerHand L10
+right EG glove -> USB serial -> laptop -> SocketCAN can0 -> left LinkerHand L10
 ```
 
-This project uses the LinkerHand Python SDK path for the hand:
-
-- `LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")`
-- `api.get_embedded_version()`
-- `api.get_state()`
-- `api.finger_move(pose=...)`
-
-The glove is read from USB serial, usually `/dev/ttyUSB0`.
-
-## Safety First
-
-- Mount or hold the L10 securely before sending movement.
-- Keep fingers, tools, and cables away from the hand while testing.
-- Run only one controller at a time. Close ROS nodes, GUI dashboards, old terminal scripts, and other LinkerHand tools before using this bridge.
-- Test the glove with `--raw` first.
-- Preview without `--send` before live control.
-- If motion is unsafe, press `Ctrl+C`, press `Stop` in the GUI, or use the hardware power switch/emergency stop.
-- Do not use `--force` unless you understand and accept the risk.
-
-## What You Need
-
-- Ubuntu 20.04 or newer is recommended.
-- Python 3.8 or newer.
-- Git.
-- A right EG/KTH5702 glove connected by USB-C/USB.
-- A USB-to-CAN adapter supported by SocketCAN.
-- A powered LinkerHand L10.
-- Linux CAN tools: `iproute2`, `can-utils`, and optionally `ethtool`.
-- Optional but recommended: Conda or another Python virtual environment.
-
-## First Setup On A Linux Laptop
-
-### 1. Clone the project
+The main workflow is the YAML controller:
 
 ```bash
-cd ~
-git clone https://github.com/notalexander30/linkerhand_eg_to_l10.git
-cd linkerhand_eg_to_l10
+python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run
 ```
 
-If you cloned somewhere else, always `cd` into this project directory before running the commands below.
+The current auto config is a tested baseline, not a final universal calibration. The EG glove has 15 DOF and the L10 has 10 DOF, so some channels are matched and some are ignored. Expect to keep tuning `glove_open`, `glove_closed`, `invert`, and `gain` for better movement.
 
-### 2. Create and activate a Python environment
+## Safety
 
-Using Conda:
+- Keep the L10 clear before starting live control.
+- Run only one hand controller at a time.
+- Start with `--dry-run` before using `--no-dry-run`.
+- Stop with `Ctrl+C`; the script sends `safe_exit_pose` on shutdown.
+- If the hand moves unexpectedly, stop first, then edit the YAML.
 
-```bash
-conda create -n linkerhand-l10 python=3.10 -y
-conda activate linkerhand-l10
-python3 -m pip install --upgrade pip
-```
+## Hardware
 
-If you already have the environment:
+- Right EG/KTH5702 glove on USB serial, currently configured as `/dev/ttyUSB1`.
+- LinkerHand L10 left hand on SocketCAN, currently configured as `can0`.
+- USB-to-CAN adapter, powered L10, and a Linux laptop.
 
-```bash
-conda activate linkerhand-l10
-```
-
-Without Conda:
+Install system tools:
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-python3 -m pip install --upgrade pip
-```
-
-### 3. Install dependencies
-
-```bash
-python3 -m pip install -r requirements.txt
 sudo apt update
 sudo apt install -y iproute2 can-utils ethtool
 ```
 
-If you get `No module named can`, run:
+Install Python dependencies:
 
 ```bash
-python3 -m pip install python-can python-can-candle
+python3 -m pip install -r requirements.txt
 ```
 
-If you get `No module named serial`, run:
+## Quick Start
+
+Clone and enter the repo:
 
 ```bash
-python3 -m pip install pyserial
+git clone https://github.com/notalexander30/linkerhand_eg_to_l10.git
+cd linkerhand_eg_to_l10
 ```
 
-### 4. Connect the hardware
-
-1. Connect the right EG/KTH5702 glove to the laptop by USB.
-2. Connect the USB-to-CAN adapter to the laptop.
-3. Connect CAN-H, CAN-L, and ground according to the adapter and L10 wiring.
-4. Power on the LinkerHand L10.
-5. Make sure no other controller is running.
-
-### 5. Find the glove serial port
+Activate your Python environment if you use one:
 
 ```bash
-python3 -m serial.tools.list_ports
-ls /dev/ttyUSB*
-ls /dev/ttyACM*
+conda activate linkerhand-l10
 ```
 
-In the current setup, the glove is usually:
-
-```text
-/dev/ttyUSB0
-```
-
-Confirm raw glove data:
-
-```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw
-```
-
-Move the glove. You should see changing KTH5702 sensor angles. Press `Ctrl+C` to stop.
-
-### 6. Find the CAN interface
-
-```bash
-ip link
-ip -br link show type can
-```
-
-You should see `can0` or `can1`.
-
-Optional helper:
-
-```bash
-chmod +x find_can.sh
-./find_can.sh
-```
-
-If you do not see a CAN interface, check the USB-to-CAN adapter, cable, driver, and power.
-
-### 7. Reset CAN: down, configure, up
-
-Most L10 setups use 1 Mbps.
-
-For `can0`:
+Bring up CAN at 1 Mbps:
 
 ```bash
 sudo ip link set can0 down
@@ -154,156 +66,148 @@ sudo ip link set can0 up
 ip -details link show can0
 ```
 
-For `can1`, replace `can0` with `can1`.
-
-Watch CAN traffic if needed:
+Check the L10:
 
 ```bash
-candump can0
-```
-
-Press `Ctrl+C` to stop `candump`.
-
-### 8. Test the left L10 alone
-
-```bash
-python3 linkerhand_l10_sdk.py --can can0 --hand-type left boot
 python3 linkerhand_l10_sdk.py --can can0 --hand-type left state
 ```
 
-Good signs:
-
-- SDK version prints.
-- The hand is detected by version, serial, or state.
-- A 10-value state prints from 0 to 255.
-
-If this fails, fix CAN/L10 first before running glove control.
-
-## Daily Start
-
-```bash
-cd ~/linkerhand_eg_to_l10
-conda activate linkerhand-l10
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw
-python3 linkerhand_l10_sdk.py --can can0 --hand-type left state
-```
-
-Preview the bridge without moving the hand:
-
-```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left
-```
-
-Send to the left L10:
-
-```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
-```
-
-## Terminal Control
-
-Root command:
-
-```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
-```
-
-Separate terminal launcher:
-
-```bash
-python3 terminal_control/glove_to_l10_terminal.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
-```
-
-Useful terminal commands:
-
-| Task | Command |
-| --- | --- |
-| Show help | `python3 glove_to_l10.py --help` |
-| Read raw glove values | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw` |
-| Preview bridge, no movement | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left` |
-| Live bridge | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send` |
-| Use `can1` | `python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can1 --hand left --send` |
-| Change max angle | `python3 glove_to_l10.py --angle-max 360 --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send` |
-| Calibrated mode preview | `python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --hand-can can0 --hand left` |
-
-## YAML Mapping Controller
-
-`control_l10_left_from_eg_glove.py` is a config-first teleoperation entry point for a right EG glove controlling a left L10. It uses the local LinkerHand SDK as:
-
-```python
-LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")
-api.finger_move(pose=pose)
-```
-
-The SDK `finger_move()` method sends a 10-value L10 pose through the lower-level `set_joint_positions()` implementation.
-
-Dry-run with generated glove values:
-
-```bash
-python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.yaml --mock-glove --dry-run --print-glove --print-pose
-```
-
-Live control with the real hand:
-
-```bash
-python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.yaml --no-dry-run --print-pose
-```
-
-The default config keeps `dry_run: true`; use `--no-dry-run` only after the printed pose looks safe. Press `Ctrl+C` to stop; in live mode the script sends the configured open-hand `safe_exit_pose` before exiting.
-
-Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, set `glove_open` to the raw glove value with that finger open and `glove_closed` to the value with that finger bent. Set `hand_open` and `hand_closed` to the matching L10 motor limits. The current defaults use the repo's L10 `Open Hand` and `Fist` examples, where the main flexion motors confirm `255=open` and `0=closed`.
-
-To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
-
-The Linker EG manual describes 15 captured values: three channels per finger. On the tested right EG glove, the raw serial order is `pinky, ring, middle, index, thumb`. The bridge names those raw sensors in `control_l10_left_from_eg_glove.py`, then the YAML maps the named sensors to L10 motors. For this setup, `_0` is rotation/base-roll, `_1` is pitch/open-close, and `_2` is abduction/side motion.
-
-### Auto-Match The 15 Glove Sensors To 10 L10 Motors
-
-If the glove sensor order does not match the L10 motor order, run the interactive matcher:
-
-```bash
-python3 calibrate_l10_glove_mapping.py --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
-```
-
-The matcher first sends an open L10 pose of ten `255` values, records the glove-open baseline, then prompts you through the 10 L10 motors. For each prompt, move only the requested right-glove finger or DOF and hold it still. The script selects the glove sensor with the strongest change from the 15 available sensors and writes:
-
-```text
-config/l10_left_eg_glove_mapping.auto.yaml
-```
-
-This repo now includes a commented `config/l10_left_eg_glove_mapping.auto.yaml` because the robot setup usually runs the auto config. If you run calibration scripts again, they may rewrite that file and remove comments; commit or back up useful manual edits first.
-
-The current auto config tracks the latest tested right-EG-glove to left-L10 setup. It uses `/dev/ttyUSB1` for the glove serial port, `can0` for the L10 CAN adapter, `hand_output_mode: normalized_255` for fast 1:1-style set-state output, and keeps thumb rotation enabled from the glove channel mapped to motor `9`.
-
-This mapping is a working baseline, not a final universal calibration. The L10 and EG glove have different DOF counts, and the glove sensor ranges can shift when the glove is worn differently. Expect to keep tuning `glove_open`, `glove_closed`, `invert`, and `gain` in `config/l10_left_eg_glove_mapping.auto.yaml` for smoother and more natural movement.
-
-Preview the generated mapping without moving the hand:
+Preview the YAML controller without moving the hand:
 
 ```bash
 python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --dry-run --print-glove --print-pose
 ```
 
-If the printed 10-value pose follows the glove correctly, run live:
+Run live:
 
 ```bash
-python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run --print-pose
+python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run
 ```
 
-Each channel has a `gain` value, which is the master-to-slave movement multiplier. Use `gain: 1.0` for normal open-to-closed mapping, increase it if the L10 does not close enough, and decrease it if it moves too far.
+Avoid `--print-glove` and `--print-pose` during normal live control because terminal printing can make motion less smooth.
 
-If one glove sensor should drive more than one L10 motor, add `--allow-duplicate-sensors` during calibration.
+## Current Auto Config
 
-### Smoother Motion
+The live robot setup usually uses:
 
-The YAML controller supports `smoothing_mode: one_euro`, based on the [1 Euro Filter](https://gery.casiez.net/1euro/) for reducing jitter while keeping fast human motion responsive.
+```text
+config/l10_left_eg_glove_mapping.auto.yaml
+```
 
-Recommended starting values for the L10 glove bridge:
+Current important settings:
 
 ```yaml
-control_hz: 60
+glove_reader:
+  port: /dev/ttyUSB1
+  baud: 115200
+can: can0
 hand_output_mode: normalized_255
-normalized_hand_open: 255
-normalized_hand_closed: 0
+motion_profile: responsive_1to1
+smoothing_mode: one_euro
+```
+
+Thumb rotation is enabled in the current auto config:
+
+```yaml
+- name: thumb_2
+  glove_key: thumb_1
+  motor_index: 9
+  l10_joint_name: Thumb Rotation
+  enabled: true
+  fixed_value: null
+```
+
+If the glove appears on a different serial port, edit the YAML. The YAML controller does not currently have a `--glove-port` override.
+
+```yaml
+glove_reader:
+  mode: serial
+  port: /dev/ttyUSB1
+  baud: 115200
+```
+
+The CAN interface can be overridden at runtime:
+
+```bash
+python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --can can1 --no-dry-run
+```
+
+## Mapping Basics
+
+L10 motor order:
+
+```text
+0 Thumb CMC Pitch
+1 Thumb Adduction/Abduction
+2 Index Finger MCP Pitch
+3 Middle Finger MCP Pitch
+4 Ring Finger MCP Pitch
+5 Pinky Finger MCP Pitch
+6 Index Finger Adduction/Abduction
+7 Ring Finger Adduction/Abduction
+8 Pinky Finger Adduction/Abduction
+9 Thumb Rotation
+```
+
+EG glove raw sensor names used by the YAML controller:
+
+```text
+0  pinky_0
+1  pinky_1
+2  pinky_2
+3  ring_0
+4  ring_1
+5  ring_2
+6  middle_0
+7  middle_1
+8  middle_2
+9  index_0
+10 index_1
+11 index_2
+12 thumb_0
+13 thumb_1
+14 thumb_2
+```
+
+In each YAML channel:
+
+```yaml
+glove_key: index_1      # which glove sensor controls this motor
+source_sensor_index: 13 # note/debug value for the raw sensor index
+motor_index: 2          # which L10 motor moves
+```
+
+To change which glove sensor drives a motor, edit `glove_key` and `source_sensor_index` together. Do not change `motor_index` unless you want a different L10 joint to move.
+
+## Tuning
+
+Most useful channel fields:
+
+```yaml
+glove_open: 115.88   # glove raw value when the motion should be open/start
+glove_closed: 103.62 # glove raw value when the motion should be closed/end
+hand_open: 255       # L10 command at glove_open
+hand_closed: 0       # L10 command at glove_closed
+invert: false        # true reverses the motion
+gain: 1.0            # >1 moves more, <1 moves less
+enabled: true        # false disables this channel
+fixed_value: null    # fixed motor value when disabled
+```
+
+Common fixes:
+
+```text
+Starts from the wrong side       -> swap hand_open and hand_closed, or toggle invert
+Moves opposite direction         -> toggle invert
+Moves too little                 -> increase gain
+Moves too far                    -> decrease gain
+One joint should not move        -> enabled: false and fixed_value: desired value
+Glove was worn differently       -> recapture glove_open/glove_closed
+```
+
+For smoother movement:
+
+```yaml
 send_interval_sec: 0.0
 motion_profile: responsive_1to1
 smoothing_mode: one_euro
@@ -314,218 +218,105 @@ pose_deadband: 0
 max_delta_per_cycle: 0
 ```
 
-`hand_output_mode: normalized_255` keeps the glove calibration open/close points, but makes every mapped L10 motor use a simple full-range set-state output: open maps to `255`, closed maps to `0`. This is the neatest mode when you want all joints to behave the same way.
+If motion is jittery while holding still, lower `one_euro_min_cutoff`. If quick movement feels laggy, raise `one_euro_beta`. If motion is too sudden, use `motion_profile: safe` and set `max_delta_per_cycle`, for example `8`.
 
-`send_interval_sec: 0.0` sends the current 10-value pose every control loop for live teleoperation. Use `send_interval_sec: 1.0` only if you want slow set-state snapshots.
+## Calibration Tools
 
-`motion_profile: responsive_1to1` makes the slave follow the mapped glove pose directly: no pose deadband and no per-cycle speed cap. Old auto-calibration files that do not have `motion_profile` use this responsive 1:1 behavior by default.
+Auto-match glove sensors to L10 motors:
 
-Tuning rule of thumb:
-
-```text
-Too jittery while holding still  -> lower one_euro_min_cutoff, for example 1.2
-Too laggy during fast motion     -> raise one_euro_beta, for example 0.12
-Too fast or sudden               -> set motion_profile: safe and max_delta_per_cycle: 8
-Too slow to close                -> keep max_delta_per_cycle: 0
+```bash
+python3 calibrate_l10_glove_mapping.py --glove-port /dev/ttyUSB1 --can can0 --no-dry-run
 ```
 
-Avoid `--print-glove` and `--print-pose` during normal live control because terminal output can make motion feel less smooth.
+Update an existing auto YAML instead of writing a new one:
 
-If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show these controls or the L10 reference joint names yet, add them without recalibrating:
+```bash
+python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB1 --can can0 --no-dry-run
+```
+
+Recalibrate only selected motors:
+
+```bash
+python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --motors 2 6 --glove-port /dev/ttyUSB1 --can can0 --no-dry-run
+```
+
+Capture open/closed glove ranges without remapping sensors:
+
+```bash
+python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB1
+```
+
+Capture only selected motors:
+
+```bash
+python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB1 --motors 2 6
+```
+
+Apply default motion-control fields to an older YAML:
 
 ```bash
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
 ```
 
-That command also repairs the EG-to-L10 glove keys in the local auto YAML:
-
-```text
-motor 0 Thumb CMC Pitch                  -> thumb_1
-motor 1 Thumb Adduction/Abduction        -> thumb_2
-motor 2 Index Finger MCP Pitch           -> index_1
-motor 3 Middle Finger MCP Pitch          -> middle_1
-motor 4 Ring Finger MCP Pitch            -> ring_1
-motor 5 Pinky Finger MCP Pitch           -> pinky_1
-motor 6 Index Finger Adduction/Abduction -> index_2
-motor 7 Ring Finger Adduction/Abduction  -> ring_2
-motor 8 Pinky Finger Adduction/Abduction -> pinky_2
-motor 9 Thumb Rotation                   -> thumb_0
-```
-
-Recalibrate only the left-index output channels in your existing auto YAML:
-
-```bash
-python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --motors 2 6 --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
-```
-
-Motor `2` is the L10 Index Finger MCP Pitch. Motor `6` is the L10 Index Finger Adduction/Abduction. With the corrected sensor naming, those are driven by `index_1` and `index_2`; if only left-index bend is wrong, use `--motors 2`.
-
-Re-capture only the open/closed glove ranges without remapping sensors:
-
-```bash
-python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0
-```
-
-For only the index finger ranges:
-
-```bash
-python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motors 2 6
-```
-
-Thumb rotation is enabled by default from `thumb_0`. If it causes trouble, hold motor `9` fixed:
+Disable thumb rotation if needed:
 
 ```bash
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --disable-thumb-rotation
 ```
 
-## GUI Control
+## Older Direct Bridge
 
-Start the GUI:
+`glove_to_l10.py` is still available for raw serial inspection and simple direct mapping.
 
-```bash
-python3 gui_control/glove_to_l10_gui.py
-```
-
-Use these default values for the current setup:
-
-```text
-Glove port: /dev/ttyUSB0
-Hand CAN: can0
-Hand side: left
-Mapping: angle
-Angle max: 360
-```
-
-Recommended GUI flow:
-
-1. Start without `Send to hand`.
-2. Confirm the terminal output changes when the glove moves.
-3. Enable `Send to hand`.
-4. Press `Start`.
-5. Press `Stop` before changing settings.
-
-## Current Mapping
-
-Default mapping is raw angle mapping:
-
-```text
-0 degrees   -> L10 position 0
-180 degrees -> L10 position 128
-360 degrees -> L10 position 255
-```
-
-Raw EG glove sensor names used by the YAML:
-
-```text
-raw 0  = pinky_0
-raw 1  = pinky_1
-raw 2  = pinky_2
-raw 3  = ring_0
-raw 4  = ring_1
-raw 5  = ring_2
-raw 6  = middle_0
-raw 7  = middle_1
-raw 8  = middle_2
-raw 9  = index_0
-raw 10 = index_1
-raw 11 = index_2
-raw 12 = thumb_0
-raw 13 = thumb_1
-raw 14 = thumb_2
-```
-
-Right glove sensors mapped to left L10 joints:
-
-```text
-glove 1  -> L10 joint 5 Pinky Finger MCP Pitch
-glove 2  -> L10 joint 8 Pinky Finger Adduction/Abduction
-glove 4  -> L10 joint 4 Ring Finger MCP Pitch
-glove 5  -> L10 joint 7 Ring Finger Adduction/Abduction
-glove 7  -> L10 joint 3 Middle Finger MCP Pitch
-glove 10 -> L10 joint 2 Index Finger MCP Pitch
-glove 11 -> L10 joint 6 Index Finger Adduction/Abduction
-glove 12 -> L10 joint 9 Thumb Rotation
-glove 13 -> L10 joint 0 Thumb CMC Pitch
-glove 14 -> L10 joint 1 Thumb Adduction/Abduction
-```
-
-Ignored glove sensors:
-
-```text
-0, 3, 6, 8, 9
-```
-
-L10 joint order:
-
-1. Thumb CMC Pitch
-2. Thumb Adduction/Abduction
-3. Index Finger MCP Pitch
-4. Middle Finger MCP Pitch
-5. Ring Finger MCP Pitch
-6. Pinky Finger MCP Pitch
-7. Index Finger Adduction/Abduction
-8. Ring Finger Adduction/Abduction
-9. Pinky Finger Adduction/Abduction
-10. Thumb Rotation
-
-## Optional Calibrated Mode
-
-The default angle mode does not require calibration.
-
-If you want open/fist calibration instead:
+Read raw glove values:
 
 ```bash
-python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --calibrate-open
-python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --calibrate-fist
-python3 glove_to_l10.py --mapping calibrated --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
+python3 glove_to_l10.py --glove-port /dev/ttyUSB1 --raw
 ```
 
-This creates or updates:
+Preview direct bridge:
 
-```text
-glove_l10_calibration.json
+```bash
+python3 glove_to_l10.py --glove-port /dev/ttyUSB1 --hand-can can0 --hand left
 ```
 
-The file is ignored by Git because it is specific to your glove and hand.
+Send direct bridge output to the L10:
+
+```bash
+python3 glove_to_l10.py --glove-port /dev/ttyUSB1 --hand-can can0 --hand left --send
+```
+
+The YAML controller is preferred for the current EG-to-L10 setup because it is easier to tune individual L10 motors.
 
 ## Troubleshooting
 
-| Problem or return message | What to do first |
+| Problem | Fix |
 | --- | --- |
-| `git clone` fails on Windows with `Filename too long` | Use a Linux laptop, or clone into a short path such as `C:\src`. On Windows you can also run `git config --global core.longpaths true`, then clone again. |
-| `python3: command not found` | Install Python 3, or use the Python inside your Conda environment. |
-| `No module named can` | Run `python3 -m pip install python-can python-can-candle`. |
-| `No module named serial` | Run `python3 -m pip install pyserial`. |
-| `No module named PyQt5` | Run `python3 -m pip install PyQt5`, or use terminal mode instead of GUI mode. |
-| `/dev/ttyUSB0` does not exist | Replug the glove and run `python3 -m serial.tools.list_ports`. It may be `/dev/ttyUSB1` or `/dev/ttyACM0`. |
-| `Permission denied: /dev/ttyUSB0` | Run `sudo usermod -aG dialout $USER`, then log out/in or run `newgrp dialout`. |
-| Raw glove mode prints nothing | Check glove power, USB cable, port name, and baud rate. Try `--baud 115200`, `--baud 57600`, or `--baud 230400`. |
-| `can0` does not appear in `ip link` | Check USB-to-CAN connection, driver, USB port, and cable. Replug the adapter. Run `ip -br link show type can`. |
-| `Cannot find device "can0"` | Use the interface that exists, for example `--hand-can can1`, or fix the adapter/driver until `can0` appears. |
-| `candump: command not found` | Run `sudo apt update && sudo apt install -y can-utils`. |
-| `ip: command not found` | Run `sudo apt update && sudo apt install -y iproute2`. |
+| `/dev/ttyUSB0` does not exist | Run `ls /dev/ttyUSB*`; the current setup often uses `/dev/ttyUSB1`. Edit `glove_reader.port` in the YAML. |
+| `Permission denied: /dev/ttyUSB1` | Run `sudo usermod -aG dialout $USER`, then log out/in or run `newgrp dialout`. |
+| Raw glove values do not print | Check glove USB cable, port name, and `baud: 115200`. |
+| `can0` does not appear | Check the USB-to-CAN adapter, then run `ip -br link show type can`. |
 | `Operation not permitted` | Use `sudo` for `ip link` commands. |
-| `RTNETLINK answers: Device or resource busy` | Stop other controllers, then run `sudo ip link set can0 down` and bring it back up. |
-| `can0 interface is not open` | Run the CAN down/configure/up commands, then retry. |
-| `SDK did not detect the hand` | Check CAN setup, hand power, `--hand left`, and `--hand-can can0`. Test with `python3 linkerhand_l10_sdk.py --can can0 --hand-type left state`. |
-| Hand moves unexpectedly | Stop with `Ctrl+C` or GUI `Stop`. Preview without `--send`. Confirm the sensor mapping and `--angle-max`. |
-| Wrong side responds | Use `--hand left` for the left L10. The glove being right-hand does not change the LinkerHand side. |
-| Another script controls the hand | Close ROS nodes, dashboards, old terminal tools, and any other LinkerHand process. |
+| `Object "set" is unknown` | Use `sudo ip link set can0 down`, not `sudo ip set can0 down`. |
+| `RTNETLINK answers: Device or resource busy` | Stop Python/ROS/CAN tools using the hand, then run `sudo ip link set can0 down`. |
+| `can0 interface is not open` | Run the CAN down/configure/up commands again. |
+| SDK does not detect the hand | Check hand power, CAN wiring, bitrate, and `python3 linkerhand_l10_sdk.py --can can0 --hand-type left state`. |
+| Hand moves unexpectedly | Press `Ctrl+C`, preview with `--dry-run`, then check `glove_key`, `invert`, `gain`, and motor order. |
+| Thumb rotation does not move | In the motor `9` channel, set `enabled: true` and `fixed_value: null`. |
 
-## When You Are Done
+## Git Workflow
 
-Stop terminal mode with:
-
-```bash
-Ctrl+C
-```
-
-Stop GUI mode with the `Stop` button.
-
-Optionally bring CAN down:
+After a good physical tuning session:
 
 ```bash
-sudo ip link set can0 down
+git status
+git add config/l10_left_eg_glove_mapping.auto.yaml README.md
+git commit -m "Tune L10 EG glove mapping"
+git push origin main
 ```
 
-Power off the hand when it is safe.
+On another computer:
+
+```bash
+git pull origin main
+```
