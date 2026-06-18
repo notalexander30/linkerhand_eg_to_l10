@@ -6,9 +6,9 @@ This script keeps the LinkerHand SDK as the only hand-control path:
     LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")
     api.finger_move(pose=[...10 values...])
 
-The glove side is right and the hand side is left. The raw EG sensor names stay
-stable, while the YAML corrects the tested physical finger offset before sending
-the 10-value pose to the L10.
+The glove side is right and the hand side is left. SERIAL_SENSOR_KEYS names the
+raw EG stream in the tested hardware order, then YAML maps those names to L10
+motors.
 """
 
 from __future__ import annotations
@@ -41,25 +41,23 @@ L10_JOINT_NAMES = [
     "Thumb Rotation",
 ]
 SERIAL_SENSOR_KEYS = [
-    "thumb_0",
-    "thumb_1",
-    "thumb_2",
-    # Linker EG exposes 15 sensors: 3 per finger in anatomical order.
-    # The EG manual describes the three per-finger channels as side swing,
-    # root/base motion, and fingertip motion; the exact channel-to-joint choice
-    # is kept in YAML so it can be re-captured without code edits.
-    "index_0",
-    "index_1",
-    "index_2",
-    "middle_0",
-    "middle_1",
-    "middle_2",
-    "ring_0",
-    "ring_1",
-    "ring_2",
+    # Tested raw serial order. Per finger: _0 rotation/base-roll, _1 pitch,
+    # _2 abduction/side motion.
     "pinky_0",
     "pinky_1",
     "pinky_2",
+    "ring_0",
+    "ring_1",
+    "ring_2",
+    "middle_0",
+    "middle_1",
+    "middle_2",
+    "index_0",
+    "index_1",
+    "index_2",
+    "thumb_0",
+    "thumb_1",
+    "thumb_2",
 ]
 
 
