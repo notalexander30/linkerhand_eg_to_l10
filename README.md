@@ -271,6 +271,8 @@ The matcher first sends an open L10 pose of ten `255` values, records the glove-
 config/l10_left_eg_glove_mapping.auto.yaml
 ```
 
+This repo now includes a commented `config/l10_left_eg_glove_mapping.auto.yaml` because the robot setup usually runs the auto config. If you run calibration scripts again, they may rewrite that file and remove comments; commit or back up useful manual edits first.
+
 Preview the generated mapping without moving the hand:
 
 ```bash
