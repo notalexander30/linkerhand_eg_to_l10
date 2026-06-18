@@ -45,30 +45,31 @@ FINGER_GROUPS = {
 }
 
 POSE_GROUPS = {
-    "thumb": [0, 1, 9],
-    # Mirrored right-glove to left-L10 flex order. Thumb remains thumb.
+    # Tested physical routing for this right EG glove:
+    # thumb=pinky/little group, index=ring, middle=middle, ring=thumb, pinky=index.
+    "thumb": [4],
     "index": [5],
-    "middle": [4],
-    "ring": [3],
-    "little": [2],
+    "middle": [3],
+    "ring": [2],
+    "little": [0, 1, 9],
 }
 
 FINGER_NAMES = ["index", "middle", "ring", "little"]
 
 ANGLE_SENSOR_TO_L10_JOINT = {
-    2: 0,   # right glove thumb sensor 2 -> left L10 Thumb CMC Pitch
-    1: 1,   # right glove thumb sensor 1 -> left L10 Thumb Adduction/Abduction
-    0: 9,   # right glove thumb sensor 0 -> left L10 Thumb Rotation
-    13: 2,  # right glove pinky sensor 1 -> left L10 Index Finger MCP Pitch
-    12: 6,  # right glove pinky sensor 0 -> left L10 Index Finger Adduction/Abduction
-    10: 3,  # right glove ring sensor 1 -> left L10 Middle Finger MCP Pitch
-    7: 4,   # right glove middle sensor 1 -> left L10 Ring Finger MCP Pitch
-    6: 7,   # right glove middle sensor 0 -> left L10 Ring Finger Adduction/Abduction
-    4: 5,   # right glove index sensor 1 -> left L10 Pinky Finger MCP Pitch
-    3: 8,   # right glove index sensor 0 -> left L10 Pinky Finger Adduction/Abduction
+    14: 0,  # physical thumb sensor 2 -> left L10 Thumb CMC Pitch
+    13: 1,  # physical thumb sensor 1 -> left L10 Thumb Adduction/Abduction
+    12: 9,  # physical thumb sensor 0 -> left L10 Thumb Rotation
+    10: 2,  # physical index sensor 1 -> left L10 Index Finger MCP Pitch
+    9: 6,   # physical index sensor 0 -> left L10 Index Finger Adduction/Abduction
+    7: 3,   # physical middle sensor 1 -> left L10 Middle Finger MCP Pitch
+    1: 4,   # physical ring sensor 1 -> left L10 Ring Finger MCP Pitch
+    0: 7,   # physical ring sensor 0 -> left L10 Ring Finger Adduction/Abduction
+    4: 5,   # physical pinky sensor 1 -> left L10 Pinky Finger MCP Pitch
+    3: 8,   # physical pinky sensor 0 -> left L10 Pinky Finger Adduction/Abduction
 }
 
-IGNORED_GLOVE_SENSORS = [5, 8, 9, 11, 14]
+IGNORED_GLOVE_SENSORS = [2, 5, 6, 8, 11]
 
 
 def strip_ansi(text: str) -> str:
@@ -280,17 +281,17 @@ def pose_from_glove(frame: dict[int, float], open_angles: dict, fist_angles: dic
     pose = pose_from_flex(flex, args)
 
     if args.thumb_mode == "follow-index":
-        thumb_base = flex.get("index", 0.0)
-        thumb_side = flex.get("index", 0.0)
-        thumb_rotation = flex.get("index", 0.0)
+        thumb_base = flex.get("ring", 0.0)
+        thumb_side = flex.get("ring", 0.0)
+        thumb_rotation = flex.get("ring", 0.0)
     elif args.thumb_mode == "average":
-        thumb_base = flex.get("thumb", 0.0)
-        thumb_side = flex.get("thumb", 0.0)
-        thumb_rotation = flex.get("thumb", 0.0)
+        thumb_base = flex.get("little", 0.0)
+        thumb_side = flex.get("little", 0.0)
+        thumb_rotation = flex.get("little", 0.0)
     else:
-        thumb_base = sensor_amounts.get(2, flex.get("thumb", 0.0))
-        thumb_side = sensor_amounts.get(1, flex.get("thumb", 0.0))
-        thumb_rotation = sensor_amounts.get(0, flex.get("thumb", 0.0))
+        thumb_base = sensor_amounts.get(14, flex.get("little", 0.0))
+        thumb_side = sensor_amounts.get(13, flex.get("little", 0.0))
+        thumb_rotation = sensor_amounts.get(12, flex.get("little", 0.0))
 
     thumb_base = gain_amount(thumb_base, args.thumb_gain)
     thumb_side = gain_amount(thumb_side, args.thumb_gain)

@@ -7,8 +7,8 @@ This script keeps the LinkerHand SDK as the only hand-control path:
     api.finger_move(pose=[...10 values...])
 
 The glove side is right and the hand side is left. The raw EG sensor names stay
-anatomical, while the YAML can mirror those channels onto the left L10 so thumb
-still drives thumb and the four non-thumb fingers can reverse across the palm.
+stable, while the YAML corrects the tested physical finger offset before sending
+the 10-value pose to the L10.
 """
 
 from __future__ import annotations
