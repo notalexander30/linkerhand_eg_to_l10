@@ -255,6 +255,8 @@ Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, s
 
 To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
 
+The Linker EG manual describes 15 captured values: three channels per finger. On the tested right EG glove, the raw serial order is thumb, pinky, middle, ring, index. The L10 has 10 active DOF, so the default bridge maps the bend channels to L10 pitch motors, maps side-swing channels to the L10 side motors, and ignores the extra EG channels that the L10 cannot reproduce.
+
 ### Auto-Match The 15 Glove Sensors To 10 L10 Motors
 
 If the glove sensor order does not match the L10 motor order, run the interactive matcher:
@@ -296,7 +298,7 @@ control_hz: 60
 hand_output_mode: normalized_255
 normalized_hand_open: 255
 normalized_hand_closed: 0
-send_interval_sec: 1.0
+send_interval_sec: 0.0
 motion_profile: responsive_1to1
 smoothing_mode: one_euro
 one_euro_min_cutoff: 2.0
@@ -308,7 +310,7 @@ max_delta_per_cycle: 0
 
 `hand_output_mode: normalized_255` keeps the glove calibration open/close points, but makes every mapped L10 motor use a simple full-range set-state output: open maps to `255`, closed maps to `0`. This is the neatest mode when you want all joints to behave the same way.
 
-`send_interval_sec: 1.0` sends the current 10-value set-state style pose once per second. Use `send_interval_sec: 0.0` if you want live streaming every control loop.
+`send_interval_sec: 0.0` sends the current 10-value pose every control loop for live teleoperation. Use `send_interval_sec: 1.0` only if you want slow set-state snapshots.
 
 `motion_profile: responsive_1to1` makes the slave follow the mapped glove pose directly: no pose deadband and no per-cycle speed cap. Old auto-calibration files that do not have `motion_profile` use this responsive 1:1 behavior by default.
 
@@ -329,10 +331,19 @@ If your generated `config/l10_left_eg_glove_mapping.auto.yaml` does not show the
 python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
 ```
 
-For faster live streaming instead of one-second set-state snapshots:
+That command also repairs the EG-to-L10 glove keys in the local auto YAML:
 
-```bash
-python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --send-interval-sec 0.0
+```text
+motor 0 Thumb CMC Pitch                  -> thumb_2
+motor 1 Thumb Adduction/Abduction        -> thumb_1
+motor 2 Index Finger MCP Pitch           -> index_2
+motor 3 Middle Finger MCP Pitch          -> middle_2
+motor 4 Ring Finger MCP Pitch            -> ring_2
+motor 5 Pinky Finger MCP Pitch           -> pinky_2
+motor 6 Index Finger Adduction/Abduction -> index_0
+motor 7 Ring Finger Adduction/Abduction  -> ring_0
+motor 8 Pinky Finger Adduction/Abduction -> pinky_0
+motor 9 Thumb Rotation                   -> thumb_0
 ```
 
 Recalibrate only the index finger channels in your existing auto YAML:
@@ -355,7 +366,11 @@ For only the index finger ranges:
 python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motors 2 6
 ```
 
-Thumb Rotation is disabled by default when you run `update_motion_controls.py`; motor `9` is held at `255` with `enabled: false` and `fixed_value: 255`.
+Thumb rotation is enabled by default from `thumb_0`. If it causes trouble, hold motor `9` fixed:
+
+```bash
+python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --disable-thumb-rotation
+```
 
 ## GUI Control
 
@@ -393,25 +408,45 @@ Default mapping is raw angle mapping:
 360 degrees -> L10 position 255
 ```
 
+Raw EG glove sensor names used by the YAML:
+
+```text
+raw 0  = thumb_0
+raw 1  = thumb_1
+raw 2  = thumb_2
+raw 3  = pinky_0
+raw 4  = pinky_1
+raw 5  = pinky_2
+raw 6  = middle_0
+raw 7  = middle_1
+raw 8  = middle_2
+raw 9  = ring_0
+raw 10 = ring_1
+raw 11 = ring_2
+raw 12 = index_0
+raw 13 = index_1
+raw 14 = index_2
+```
+
 Right glove sensors mapped to left L10 joints:
 
 ```text
-glove 0  -> L10 joint 0 Thumb CMC Pitch
+glove 0  -> L10 joint 9 Thumb Rotation
 glove 1  -> L10 joint 1 Thumb Adduction/Abduction
-glove 2  -> L10 joint 9 Thumb Rotation
-glove 3  -> L10 joint 2 Index Finger MCP Pitch
-glove 4  -> L10 joint 6 Index Finger Adduction/Abduction
-glove 6  -> L10 joint 3 Middle Finger MCP Pitch
-glove 9  -> L10 joint 4 Ring Finger MCP Pitch
-glove 10 -> L10 joint 7 Ring Finger Adduction/Abduction
-glove 12 -> L10 joint 5 Pinky Finger MCP Pitch
-glove 13 -> L10 joint 8 Pinky Finger Adduction/Abduction
+glove 2  -> L10 joint 0 Thumb CMC Pitch
+glove 3  -> L10 joint 8 Pinky Finger Adduction/Abduction
+glove 5  -> L10 joint 5 Pinky Finger MCP Pitch
+glove 8  -> L10 joint 3 Middle Finger MCP Pitch
+glove 9  -> L10 joint 7 Ring Finger Adduction/Abduction
+glove 11 -> L10 joint 4 Ring Finger MCP Pitch
+glove 12 -> L10 joint 6 Index Finger Adduction/Abduction
+glove 14 -> L10 joint 2 Index Finger MCP Pitch
 ```
 
 Ignored glove sensors:
 
 ```text
-5, 7, 8, 11, 14
+4, 6, 7, 10, 13
 ```
 
 L10 joint order:

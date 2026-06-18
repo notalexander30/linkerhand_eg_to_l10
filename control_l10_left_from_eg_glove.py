@@ -7,8 +7,8 @@ This script keeps the LinkerHand SDK as the only hand-control path:
     api.finger_move(pose=[...10 values...])
 
 The glove side is right and the hand side is left, but mapping is by anatomical
-finger name. A right index-finger glove channel controls the left index motor,
-not the pinky.
+finger name. The Linker EG serial stream reports the outside fingers from the
+pinky side first, so the raw order is corrected before YAML mapping is applied.
 """
 
 from __future__ import annotations
@@ -44,18 +44,22 @@ SERIAL_SENSOR_KEYS = [
     "thumb_0",
     "thumb_1",
     "thumb_2",
-    "index_0",
-    "index_1",
-    "index_2",
+    # Linker EG exposes 15 sensors: 3 thumb, 3 pinky, 3 middle, 3 ring, 3 index.
+    # The EG manual describes the three per-finger channels as side swing,
+    # root/base motion, and fingertip motion; the exact channel-to-joint choice
+    # is kept in YAML so it can be re-captured without code edits.
+    "pinky_0",
+    "pinky_1",
+    "pinky_2",
     "middle_0",
     "middle_1",
     "middle_2",
     "ring_0",
     "ring_1",
     "ring_2",
-    "pinky_0",
-    "pinky_1",
-    "pinky_2",
+    "index_0",
+    "index_1",
+    "index_2",
 ]
 
 

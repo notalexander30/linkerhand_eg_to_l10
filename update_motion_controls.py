@@ -11,10 +11,23 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from control_l10_left_from_eg_glove import L10_JOINT_NAMES
+from control_l10_left_from_eg_glove import L10_JOINT_NAMES, SERIAL_SENSOR_KEYS
 
 
 DEFAULT_CONFIG = Path("config/l10_left_eg_glove_mapping.auto.yaml")
+REFERENCE_GLOVE_KEYS_BY_MOTOR = {
+    0: "thumb_2",
+    1: "thumb_1",
+    2: "index_2",
+    3: "middle_2",
+    4: "ring_2",
+    5: "pinky_2",
+    6: "index_0",
+    7: "ring_0",
+    8: "pinky_0",
+    9: "thumb_0",
+}
+SOURCE_SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
 
 
 def load_yaml(path: Path) -> dict[str, Any]:
@@ -40,7 +53,7 @@ def save_yaml(path: Path, data: dict[str, Any]) -> None:
 
 
 def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
-    """Set the speed/smoothing fields while keeping calibration channels unchanged."""
+    """Set speed/smoothing fields and optionally apply the EG-to-L10 key map."""
 
     data["control_hz"] = args.control_hz
     data["hand_output_mode"] = args.hand_output_mode
@@ -59,9 +72,21 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
         motor_index = int(channel.get("motor_index", -1))
         if 0 <= motor_index < len(L10_JOINT_NAMES):
             channel["l10_joint_name"] = L10_JOINT_NAMES[motor_index]
+        if args.reference_glove_keys and motor_index in REFERENCE_GLOVE_KEYS_BY_MOTOR:
+            glove_key = REFERENCE_GLOVE_KEYS_BY_MOTOR[motor_index]
+            channel["glove_key"] = glove_key
+            channel["source_sensor_index"] = SOURCE_SENSOR_INDEX_BY_KEY.get(glove_key)
+            if motor_index == 9 and not args.disable_thumb_rotation:
+                channel["enabled"] = True
+                channel["fixed_value"] = None
         if args.disable_thumb_rotation and motor_index == 9:
             channel["enabled"] = False
             channel["fixed_value"] = args.thumb_rotation_fixed_value
+    metadata = dict(data.get("metadata", {}))
+    if args.reference_glove_keys:
+        metadata["reference_mapping"] = "EG raw order thumb,pinky,middle,ring,index; L10 pitch uses *_2 and side swing uses *_0"
+    metadata["thumb_rotation"] = "enabled from thumb_0" if not args.disable_thumb_rotation else "disabled; motor 9 held fixed"
+    data["metadata"] = metadata
     return data
 
 
@@ -79,7 +104,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--normalized-hand-open", type=int, default=255, help="Open command in normalized_255 mode.")
     parser.add_argument("--normalized-hand-closed", type=int, default=0, help="Closed command in normalized_255 mode.")
-    parser.add_argument("--send-interval-sec", type=float, default=1.0, help="1.0 sends a set-state snapshot every second; 0.0 sends every loop.")
+    parser.add_argument("--send-interval-sec", type=float, default=0.0, help="0.0 sends every loop; 1.0 sends a slow set-state snapshot.")
     parser.add_argument(
         "--motion-profile",
         choices=["responsive_1to1", "safe"],
@@ -94,13 +119,20 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--pose-deadband", type=int, default=0, help="0 gives most 1:1 response.")
     parser.add_argument("--max-delta-per-cycle", type=int, default=0, help="0 means no speed cap.")
     parser.add_argument(
-        "--enable-thumb-rotation",
-        dest="disable_thumb_rotation",
+        "--keep-glove-keys",
+        dest="reference_glove_keys",
         action="store_false",
-        help="Do not disable motor 9 thumb rotation.",
+        help="Keep existing glove_key values instead of applying the EG-to-L10 reference map.",
     )
+    parser.add_argument(
+        "--disable-thumb-rotation",
+        dest="disable_thumb_rotation",
+        action="store_true",
+        help="Disable motor 9 thumb rotation and hold it fixed.",
+    )
+    parser.add_argument("--enable-thumb-rotation", dest="disable_thumb_rotation", action="store_false", help=argparse.SUPPRESS)
     parser.add_argument("--thumb-rotation-fixed-value", type=int, default=255, help="Fixed value for disabled thumb rotation.")
-    parser.set_defaults(disable_thumb_rotation=True)
+    parser.set_defaults(disable_thumb_rotation=False, reference_glove_keys=True)
     return parser
 
 
