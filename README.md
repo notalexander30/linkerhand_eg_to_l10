@@ -255,7 +255,7 @@ Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, s
 
 To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
 
-The Linker EG manual describes 15 captured values: three channels per finger. On the tested right EG glove, the raw serial order is thumb, pinky, middle, ring, index. The L10 has 10 active DOF, so the default bridge maps the bend channels to L10 pitch motors, maps side-swing channels to the L10 side motors, and ignores the extra EG channels that the L10 cannot reproduce.
+The Linker EG manual describes 15 captured values: three channels per finger. On the tested right EG glove, the raw serial order used by this bridge is thumb, index, middle, ring, pinky. The L10 has 10 active DOF, so the default bridge maps the bend channels to L10 pitch motors, maps side-swing channels to the L10 side motors, and ignores the extra EG channels that the L10 cannot reproduce.
 
 ### Auto-Match The 15 Glove Sensors To 10 L10 Motors
 
@@ -414,18 +414,18 @@ Raw EG glove sensor names used by the YAML:
 raw 0  = thumb_0
 raw 1  = thumb_1
 raw 2  = thumb_2
-raw 3  = pinky_0
-raw 4  = pinky_1
-raw 5  = pinky_2
+raw 3  = index_0
+raw 4  = index_1
+raw 5  = index_2
 raw 6  = middle_0
 raw 7  = middle_1
 raw 8  = middle_2
 raw 9  = ring_0
 raw 10 = ring_1
 raw 11 = ring_2
-raw 12 = index_0
-raw 13 = index_1
-raw 14 = index_2
+raw 12 = pinky_0
+raw 13 = pinky_1
+raw 14 = pinky_2
 ```
 
 Right glove sensors mapped to left L10 joints:
@@ -434,13 +434,13 @@ Right glove sensors mapped to left L10 joints:
 glove 0  -> L10 joint 9 Thumb Rotation
 glove 1  -> L10 joint 1 Thumb Adduction/Abduction
 glove 2  -> L10 joint 0 Thumb CMC Pitch
-glove 3  -> L10 joint 8 Pinky Finger Adduction/Abduction
-glove 5  -> L10 joint 5 Pinky Finger MCP Pitch
+glove 3  -> L10 joint 6 Index Finger Adduction/Abduction
+glove 5  -> L10 joint 2 Index Finger MCP Pitch
 glove 8  -> L10 joint 3 Middle Finger MCP Pitch
 glove 9  -> L10 joint 7 Ring Finger Adduction/Abduction
 glove 11 -> L10 joint 4 Ring Finger MCP Pitch
-glove 12 -> L10 joint 6 Index Finger Adduction/Abduction
-glove 14 -> L10 joint 2 Index Finger MCP Pitch
+glove 12 -> L10 joint 8 Pinky Finger Adduction/Abduction
+glove 14 -> L10 joint 5 Pinky Finger MCP Pitch
 ```
 
 Ignored glove sensors:

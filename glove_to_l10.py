@@ -38,11 +38,10 @@ ANSI_RE = re.compile(r"\x1b\[[0-?]*[ -/]*[@-~]")
 
 FINGER_GROUPS = {
     "thumb": [0, 1, 2],
-    # Linker EG serial order reports the outside fingers from pinky to index.
-    "index": [12, 13, 14],
+    "index": [3, 4, 5],
     "middle": [6, 7, 8],
     "ring": [9, 10, 11],
-    "little": [3, 4, 5],
+    "little": [12, 13, 14],
 }
 
 POSE_GROUPS = {
@@ -59,13 +58,13 @@ ANGLE_SENSOR_TO_L10_JOINT = {
     2: 0,   # right glove thumb sensor 2 -> left L10 Thumb CMC Pitch
     1: 1,   # right glove thumb sensor 1 -> left L10 Thumb Adduction/Abduction
     0: 9,   # right glove thumb sensor 0 -> left L10 Thumb Rotation
-    14: 2,  # right glove index sensor 2 -> left L10 Index Finger MCP Pitch
-    12: 6,  # right glove index sensor 0 -> left L10 Index Finger Adduction/Abduction
+    5: 2,   # right glove index sensor 2 -> left L10 Index Finger MCP Pitch
+    3: 6,   # right glove index sensor 0 -> left L10 Index Finger Adduction/Abduction
     8: 3,   # right glove middle sensor 2 -> left L10 Middle Finger MCP Pitch
     11: 4,  # right glove ring sensor 2 -> left L10 Ring Finger MCP Pitch
     9: 7,   # right glove ring sensor 0 -> left L10 Ring Finger Adduction/Abduction
-    5: 5,   # right glove little/pinky sensor 2 -> left L10 Pinky Finger MCP Pitch
-    3: 8,   # right glove little/pinky sensor 0 -> left L10 Pinky Finger Adduction/Abduction
+    14: 5,  # right glove little/pinky sensor 2 -> left L10 Pinky Finger MCP Pitch
+    12: 8,  # right glove little/pinky sensor 0 -> left L10 Pinky Finger Adduction/Abduction
 }
 
 IGNORED_GLOVE_SENSORS = [4, 6, 7, 10, 13]

@@ -84,7 +84,7 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
             channel["fixed_value"] = args.thumb_rotation_fixed_value
     metadata = dict(data.get("metadata", {}))
     if args.reference_glove_keys:
-        metadata["reference_mapping"] = "EG raw order thumb,pinky,middle,ring,index; L10 pitch uses *_2 and side swing uses *_0"
+        metadata["reference_mapping"] = "EG raw order thumb,index,middle,ring,pinky; L10 pitch uses *_2 and side swing uses *_0"
     metadata["thumb_rotation"] = "enabled from thumb_0" if not args.disable_thumb_rotation else "disabled; motor 9 held fixed"
     data["metadata"] = metadata
     return data
