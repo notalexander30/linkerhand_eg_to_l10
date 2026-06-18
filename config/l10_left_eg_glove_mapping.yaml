@@ -53,9 +53,10 @@ glove_reader:
 # 12 pinky_0, 13 pinky_1, 14 pinky_2.
 #
 # The EG manual describes 15 DOF as three channels per finger. The L10 only has
-# 10 active DOF, so this YAML uses finger bend channels for L10 pitch motors,
-# side-swing channels for the L10 side motors, and leaves unused EG tip/extra
-# channels out of the slave mapping.
+# 10 active DOF, so this YAML mirrors the right glove onto the left L10: thumb
+# still drives thumb, while the four non-thumb fingers reverse across the palm.
+# The latest test video looked better with *_1 as the pitch channel for
+# index/middle/ring/pinky, and *_0 as the side-swing channel.
 #
 # hand_open and hand_closed are seeded from the repo's L10 Open Hand and Fist
 # poses. For the main flexion motors this confirms 255=open and 0=closed.
@@ -85,8 +86,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_mcp_pitch
-    glove_key: index_2
-    source_sensor_index: 5
+    glove_key: pinky_1
+    source_sensor_index: 13
     l10_joint_name: Index Finger MCP Pitch
     motor_index: 2
     glove_open: 0
@@ -97,8 +98,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: middle_finger_mcp_pitch
-    glove_key: middle_2
-    source_sensor_index: 8
+    glove_key: ring_1
+    source_sensor_index: 10
     l10_joint_name: Middle Finger MCP Pitch
     motor_index: 3
     glove_open: 0
@@ -109,8 +110,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: ring_finger_mcp_pitch
-    glove_key: ring_2
-    source_sensor_index: 11
+    glove_key: middle_1
+    source_sensor_index: 7
     l10_joint_name: Ring Finger MCP Pitch
     motor_index: 4
     glove_open: 0
@@ -121,8 +122,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_finger_mcp_pitch
-    glove_key: pinky_2
-    source_sensor_index: 14
+    glove_key: index_1
+    source_sensor_index: 4
     l10_joint_name: Pinky Finger MCP Pitch
     motor_index: 5
     glove_open: 0
@@ -133,8 +134,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_adduction_abduction
-    glove_key: index_0
-    source_sensor_index: 3
+    glove_key: pinky_0
+    source_sensor_index: 12
     l10_joint_name: Index Finger Adduction/Abduction
     motor_index: 6
     glove_open: 0
@@ -145,8 +146,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: ring_finger_adduction_abduction
-    glove_key: ring_0
-    source_sensor_index: 9
+    glove_key: middle_0
+    source_sensor_index: 6
     l10_joint_name: Ring Finger Adduction/Abduction
     motor_index: 7
     glove_open: 0
@@ -157,8 +158,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_finger_adduction_abduction
-    glove_key: pinky_0
-    source_sensor_index: 12
+    glove_key: index_0
+    source_sensor_index: 3
     l10_joint_name: Pinky Finger Adduction/Abduction
     motor_index: 8
     glove_open: 0

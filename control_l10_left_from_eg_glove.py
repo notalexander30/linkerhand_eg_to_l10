@@ -6,9 +6,9 @@ This script keeps the LinkerHand SDK as the only hand-control path:
     LinkerHandApi(hand_type="left", hand_joint="L10", can="can0")
     api.finger_move(pose=[...10 values...])
 
-The glove side is right and the hand side is left, but mapping is by anatomical
-finger name. A right index-finger glove channel controls the left index motor,
-and a right pinky channel controls the left pinky motor.
+The glove side is right and the hand side is left. The raw EG sensor names stay
+anatomical, while the YAML can mirror those channels onto the left L10 so thumb
+still drives thumb and the four non-thumb fingers can reverse across the palm.
 """
 
 from __future__ import annotations

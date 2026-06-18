@@ -255,7 +255,7 @@ Tune calibration in `config/l10_left_eg_glove_mapping.yaml`. For each channel, s
 
 To connect a different real Linker EG glove source later, extend the `GloveReader` class in `control_l10_left_from_eg_glove.py`. It currently supports mock values and the existing serial/KTH5702 parser from `glove_to_l10.py`; UDP, ROS topic, or vendor SDK readers can be added as new modes that yield dictionaries keyed like `thumb_0`, `index_0`, `middle_0`, `ring_0`, and `pinky_0`.
 
-The Linker EG manual describes 15 captured values: three channels per finger. On the tested right EG glove, the raw serial order used by this bridge is thumb, index, middle, ring, pinky. The L10 has 10 active DOF, so the default bridge maps the bend channels to L10 pitch motors, maps side-swing channels to the L10 side motors, and ignores the extra EG channels that the L10 cannot reproduce.
+The Linker EG manual describes 15 captured values: three channels per finger. On the tested right EG glove, the raw serial order used by this bridge is thumb, index, middle, ring, pinky. The L10 has 10 active DOF, so the default bridge mirrors the right glove onto the left L10: thumb still drives thumb, the four non-thumb fingers reverse across the palm, `_1` channels drive finger pitch, `_0` channels drive side swing, and extra EG channels that the L10 cannot reproduce are ignored.
 
 ### Auto-Match The 15 Glove Sensors To 10 L10 Motors
 
@@ -336,23 +336,23 @@ That command also repairs the EG-to-L10 glove keys in the local auto YAML:
 ```text
 motor 0 Thumb CMC Pitch                  -> thumb_2
 motor 1 Thumb Adduction/Abduction        -> thumb_1
-motor 2 Index Finger MCP Pitch           -> index_2
-motor 3 Middle Finger MCP Pitch          -> middle_2
-motor 4 Ring Finger MCP Pitch            -> ring_2
-motor 5 Pinky Finger MCP Pitch           -> pinky_2
-motor 6 Index Finger Adduction/Abduction -> index_0
-motor 7 Ring Finger Adduction/Abduction  -> ring_0
-motor 8 Pinky Finger Adduction/Abduction -> pinky_0
+motor 2 Index Finger MCP Pitch           -> pinky_1
+motor 3 Middle Finger MCP Pitch          -> ring_1
+motor 4 Ring Finger MCP Pitch            -> middle_1
+motor 5 Pinky Finger MCP Pitch           -> index_1
+motor 6 Index Finger Adduction/Abduction -> pinky_0
+motor 7 Ring Finger Adduction/Abduction  -> middle_0
+motor 8 Pinky Finger Adduction/Abduction -> index_0
 motor 9 Thumb Rotation                   -> thumb_0
 ```
 
-Recalibrate only the index finger channels in your existing auto YAML:
+Recalibrate only the left-index output channels in your existing auto YAML:
 
 ```bash
 python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --motors 2 6 --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
 ```
 
-Motor `2` is Index Finger MCP Pitch. Motor `6` is Index Finger Adduction/Abduction. If only index bend is wrong, use `--motors 2`.
+Motor `2` is the L10 Index Finger MCP Pitch. Motor `6` is the L10 Index Finger Adduction/Abduction. With the mirrored right-glove-to-left-L10 map, those are driven by `pinky_1` and `pinky_0`; if only left-index bend is wrong, use `--motors 2`.
 
 Re-capture only the open/closed glove ranges without remapping sensors:
 
@@ -434,19 +434,19 @@ Right glove sensors mapped to left L10 joints:
 glove 0  -> L10 joint 9 Thumb Rotation
 glove 1  -> L10 joint 1 Thumb Adduction/Abduction
 glove 2  -> L10 joint 0 Thumb CMC Pitch
-glove 3  -> L10 joint 6 Index Finger Adduction/Abduction
-glove 5  -> L10 joint 2 Index Finger MCP Pitch
-glove 8  -> L10 joint 3 Middle Finger MCP Pitch
-glove 9  -> L10 joint 7 Ring Finger Adduction/Abduction
-glove 11 -> L10 joint 4 Ring Finger MCP Pitch
-glove 12 -> L10 joint 8 Pinky Finger Adduction/Abduction
-glove 14 -> L10 joint 5 Pinky Finger MCP Pitch
+glove 3  -> L10 joint 8 Pinky Finger Adduction/Abduction
+glove 4  -> L10 joint 5 Pinky Finger MCP Pitch
+glove 6  -> L10 joint 7 Ring Finger Adduction/Abduction
+glove 7  -> L10 joint 4 Ring Finger MCP Pitch
+glove 10 -> L10 joint 3 Middle Finger MCP Pitch
+glove 12 -> L10 joint 6 Index Finger Adduction/Abduction
+glove 13 -> L10 joint 2 Index Finger MCP Pitch
 ```
 
 Ignored glove sensors:
 
 ```text
-4, 6, 7, 10, 13
+5, 8, 9, 11, 14
 ```
 
 L10 joint order:

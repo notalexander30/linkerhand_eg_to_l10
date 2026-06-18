@@ -18,13 +18,13 @@ DEFAULT_CONFIG = Path("config/l10_left_eg_glove_mapping.auto.yaml")
 REFERENCE_GLOVE_KEYS_BY_MOTOR = {
     0: "thumb_2",
     1: "thumb_1",
-    2: "index_2",
-    3: "middle_2",
-    4: "ring_2",
-    5: "pinky_2",
-    6: "index_0",
-    7: "ring_0",
-    8: "pinky_0",
+    2: "pinky_1",
+    3: "ring_1",
+    4: "middle_1",
+    5: "index_1",
+    6: "pinky_0",
+    7: "middle_0",
+    8: "index_0",
     9: "thumb_0",
 }
 SOURCE_SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
@@ -84,7 +84,10 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
             channel["fixed_value"] = args.thumb_rotation_fixed_value
     metadata = dict(data.get("metadata", {}))
     if args.reference_glove_keys:
-        metadata["reference_mapping"] = "EG raw order thumb,index,middle,ring,pinky; L10 pitch uses *_2 and side swing uses *_0"
+        metadata["reference_mapping"] = (
+            "Right EG glove mirrored to left L10; thumb stays thumb, "
+            "non-thumb pitch uses *_1, side swing uses *_0"
+        )
     metadata["thumb_rotation"] = "enabled from thumb_0" if not args.disable_thumb_rotation else "disabled; motor 9 held fixed"
     data["metadata"] = metadata
     return data

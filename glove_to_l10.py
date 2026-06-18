@@ -46,10 +46,11 @@ FINGER_GROUPS = {
 
 POSE_GROUPS = {
     "thumb": [0, 1, 9],
-    "index": [2],
-    "middle": [3],
-    "ring": [4],
-    "little": [5],
+    # Mirrored right-glove to left-L10 flex order. Thumb remains thumb.
+    "index": [5],
+    "middle": [4],
+    "ring": [3],
+    "little": [2],
 }
 
 FINGER_NAMES = ["index", "middle", "ring", "little"]
@@ -58,16 +59,16 @@ ANGLE_SENSOR_TO_L10_JOINT = {
     2: 0,   # right glove thumb sensor 2 -> left L10 Thumb CMC Pitch
     1: 1,   # right glove thumb sensor 1 -> left L10 Thumb Adduction/Abduction
     0: 9,   # right glove thumb sensor 0 -> left L10 Thumb Rotation
-    5: 2,   # right glove index sensor 2 -> left L10 Index Finger MCP Pitch
-    3: 6,   # right glove index sensor 0 -> left L10 Index Finger Adduction/Abduction
-    8: 3,   # right glove middle sensor 2 -> left L10 Middle Finger MCP Pitch
-    11: 4,  # right glove ring sensor 2 -> left L10 Ring Finger MCP Pitch
-    9: 7,   # right glove ring sensor 0 -> left L10 Ring Finger Adduction/Abduction
-    14: 5,  # right glove little/pinky sensor 2 -> left L10 Pinky Finger MCP Pitch
-    12: 8,  # right glove little/pinky sensor 0 -> left L10 Pinky Finger Adduction/Abduction
+    13: 2,  # right glove pinky sensor 1 -> left L10 Index Finger MCP Pitch
+    12: 6,  # right glove pinky sensor 0 -> left L10 Index Finger Adduction/Abduction
+    10: 3,  # right glove ring sensor 1 -> left L10 Middle Finger MCP Pitch
+    7: 4,   # right glove middle sensor 1 -> left L10 Ring Finger MCP Pitch
+    6: 7,   # right glove middle sensor 0 -> left L10 Ring Finger Adduction/Abduction
+    4: 5,   # right glove index sensor 1 -> left L10 Pinky Finger MCP Pitch
+    3: 8,   # right glove index sensor 0 -> left L10 Pinky Finger Adduction/Abduction
 }
 
-IGNORED_GLOVE_SENSORS = [4, 6, 7, 10, 13]
+IGNORED_GLOVE_SENSORS = [5, 8, 9, 11, 14]
 
 
 def strip_ansi(text: str) -> str:
