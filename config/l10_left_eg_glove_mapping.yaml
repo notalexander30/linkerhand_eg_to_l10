@@ -48,22 +48,24 @@ glove_reader:
   baud: 115200
 
 # Linker EG raw serial order used by this bridge:
-# 0 thumb_0, 1 thumb_1, 2 thumb_2, 3 index_0, 4 index_1, 5 index_2,
+# 0 thumb_0, 1 thumb_1, 2 thumb_2, 3 pinky_0, 4 pinky_1, 5 pinky_2,
 # 6 middle_0, 7 middle_1, 8 middle_2, 9 ring_0, 10 ring_1, 11 ring_2,
-# 12 pinky_0, 13 pinky_1, 14 pinky_2.
+# 12 index_0, 13 index_1, 14 index_2.
 #
-# The EG manual describes 15 DOF as three channels per finger. The L10 only has
-# 10 active DOF. Live testing showed the raw sensor groups are offset on this
-# right EG glove, so this YAML corrects the physical finger routing first:
-# thumb -> pinky_*, index -> ring_*, middle -> middle_*, ring -> thumb_*,
-# and pinky -> index_*. Non-thumb pitch uses *_1 and side swing uses *_0.
+# apply_reference_mapping keeps stale local auto YAML files from using an old
+# finger order. Set it to false only when manually testing raw glove_key changes.
+apply_reference_mapping: true
+#
+# The L10 has 10 active DOF. This YAML maps logical finger names directly:
+# thumb -> thumb, index -> index, middle -> middle, ring -> ring, pinky -> pinky.
+# Non-thumb pitch uses *_1 and side swing uses *_0.
 #
 # hand_open and hand_closed are seeded from the repo's L10 Open Hand and Fist
 # poses. For the main flexion motors this confirms 255=open and 0=closed.
 channels:
   - name: thumb_cmc_pitch
-    glove_key: pinky_2
-    source_sensor_index: 14
+    glove_key: thumb_2
+    source_sensor_index: 2
     l10_joint_name: Thumb CMC Pitch
     motor_index: 0
     glove_open: 0
@@ -74,8 +76,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: thumb_adduction_abduction
-    glove_key: pinky_1
-    source_sensor_index: 13
+    glove_key: thumb_1
+    source_sensor_index: 1
     l10_joint_name: Thumb Adduction/Abduction
     motor_index: 1
     glove_open: 0
@@ -86,8 +88,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_mcp_pitch
-    glove_key: ring_1
-    source_sensor_index: 10
+    glove_key: index_1
+    source_sensor_index: 13
     l10_joint_name: Index Finger MCP Pitch
     motor_index: 2
     glove_open: 0
@@ -110,8 +112,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: ring_finger_mcp_pitch
-    glove_key: thumb_1
-    source_sensor_index: 1
+    glove_key: ring_1
+    source_sensor_index: 10
     l10_joint_name: Ring Finger MCP Pitch
     motor_index: 4
     glove_open: 0
@@ -122,7 +124,7 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_finger_mcp_pitch
-    glove_key: index_1
+    glove_key: pinky_1
     source_sensor_index: 4
     l10_joint_name: Pinky Finger MCP Pitch
     motor_index: 5
@@ -134,8 +136,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: index_finger_adduction_abduction
-    glove_key: ring_0
-    source_sensor_index: 9
+    glove_key: index_0
+    source_sensor_index: 12
     l10_joint_name: Index Finger Adduction/Abduction
     motor_index: 6
     glove_open: 0
@@ -146,8 +148,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: ring_finger_adduction_abduction
-    glove_key: thumb_0
-    source_sensor_index: 0
+    glove_key: ring_0
+    source_sensor_index: 9
     l10_joint_name: Ring Finger Adduction/Abduction
     motor_index: 7
     glove_open: 0
@@ -158,7 +160,7 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: pinky_finger_adduction_abduction
-    glove_key: index_0
+    glove_key: pinky_0
     source_sensor_index: 3
     l10_joint_name: Pinky Finger Adduction/Abduction
     motor_index: 8
@@ -170,8 +172,8 @@ channels:
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
   - name: thumb_rotation
-    glove_key: pinky_0
-    source_sensor_index: 12
+    glove_key: thumb_0
+    source_sensor_index: 0
     l10_joint_name: Thumb Rotation
     motor_index: 9
     enabled: true

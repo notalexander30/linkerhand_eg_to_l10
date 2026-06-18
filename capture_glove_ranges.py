@@ -19,7 +19,7 @@ from typing import Any, Iterable, Iterator, Mapping
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-from control_l10_left_from_eg_glove import DEFAULT_CONFIG, GloveReader  # noqa: E402
+from control_l10_left_from_eg_glove import DEFAULT_CONFIG, GloveReader, apply_reference_mapping  # noqa: E402
 
 
 DEFAULT_AUTO_CONFIG = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.auto.yaml"
@@ -157,6 +157,8 @@ def main() -> None:
         raise SystemExit("--samples must be at least 1.")
 
     data = load_yaml(args.config)
+    if bool(data.get("apply_reference_mapping", True)):
+        apply_reference_mapping(data)
     motors = None if args.motors is None else set(args.motors)
     channels = select_channels(data, motors, args.include_disabled)
     keys = sorted({str(channel["glove_key"]) for channel in channels})

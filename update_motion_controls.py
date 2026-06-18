@@ -11,22 +11,14 @@ import argparse
 from pathlib import Path
 from typing import Any
 
-from control_l10_left_from_eg_glove import L10_JOINT_NAMES, SERIAL_SENSOR_KEYS
+from control_l10_left_from_eg_glove import (
+    L10_JOINT_NAMES,
+    REFERENCE_GLOVE_KEYS_BY_MOTOR,
+    SERIAL_SENSOR_KEYS,
+)
 
 
 DEFAULT_CONFIG = Path("config/l10_left_eg_glove_mapping.auto.yaml")
-REFERENCE_GLOVE_KEYS_BY_MOTOR = {
-    0: "pinky_2",
-    1: "pinky_1",
-    2: "ring_1",
-    3: "middle_1",
-    4: "thumb_1",
-    5: "index_1",
-    6: "ring_0",
-    7: "thumb_0",
-    8: "index_0",
-    9: "pinky_0",
-}
 SOURCE_SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
 
 
@@ -85,10 +77,11 @@ def apply_motion_controls(data: dict[str, Any], args: argparse.Namespace) -> dic
     metadata = dict(data.get("metadata", {}))
     if args.reference_glove_keys:
         metadata["reference_mapping"] = (
-            "Corrected tested EG sensor offset: thumb=pinky_*, index=ring_*, "
-            "middle=middle_*, ring=thumb_*, pinky=index_*"
+            "Tested EG raw order is thumb,pinky,middle,ring,index; logical "
+            "mapping is thumb->thumb, index->index, middle->middle, ring->ring, pinky->pinky"
         )
-    metadata["thumb_rotation"] = "enabled from pinky_0" if not args.disable_thumb_rotation else "disabled; motor 9 held fixed"
+    data["apply_reference_mapping"] = True
+    metadata["thumb_rotation"] = "enabled from thumb_0" if not args.disable_thumb_rotation else "disabled; motor 9 held fixed"
     data["metadata"] = metadata
     return data
 
