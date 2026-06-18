@@ -273,6 +273,10 @@ config/l10_left_eg_glove_mapping.auto.yaml
 
 This repo now includes a commented `config/l10_left_eg_glove_mapping.auto.yaml` because the robot setup usually runs the auto config. If you run calibration scripts again, they may rewrite that file and remove comments; commit or back up useful manual edits first.
 
+The current auto config tracks the latest tested right-EG-glove to left-L10 setup. It uses `/dev/ttyUSB1` for the glove serial port, `can0` for the L10 CAN adapter, `hand_output_mode: normalized_255` for fast 1:1-style set-state output, and keeps thumb rotation enabled from the glove channel mapped to motor `9`.
+
+This mapping is a working baseline, not a final universal calibration. The L10 and EG glove have different DOF counts, and the glove sensor ranges can shift when the glove is worn differently. Expect to keep tuning `glove_open`, `glove_closed`, `invert`, and `gain` in `config/l10_left_eg_glove_mapping.auto.yaml` for smoother and more natural movement.
+
 Preview the generated mapping without moving the hand:
 
 ```bash
