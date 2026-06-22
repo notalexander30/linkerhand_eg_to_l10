@@ -59,11 +59,7 @@ conda activate linkerhand-l10
 Bring up CAN at 1 Mbps:
 
 ```bash
-sudo ip link set can0 down
-sudo ip link set can0 type can bitrate 1000000 restart-ms 100
-sudo ip link set can0 txqueuelen 1000
-sudo ip link set can0 up
-ip -details link show can0
+sudo /usr/sbin/ip link set can0 up type can bitrate 1000000
 ```
 
 Check the L10:
