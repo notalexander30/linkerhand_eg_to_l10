@@ -19,7 +19,7 @@ safe_exit_pose:
 - 255
 glove_reader:
   mode: serial
-  port: /dev/ttyUSB1
+  port: /dev/ttyUSB0
   baud: 115200
 metadata:
   generated_by: calibrate_l10_glove_mapping.py
@@ -53,25 +53,25 @@ channels:
   glove_key: thumb_2
   source_sensor_index: 2
   motor_index: 0
-  glove_open: 282.66
-  glove_closed: 222.39
+  glove_open: 240
+  glove_closed: 300
   hand_open: 255
   hand_closed: 0
-  invert: false
+  invert: true
   gain: 1.0
   match_delta: 1.25
   match_confidence: 4.684
   l10_joint_name: Thumb CMC Pitch
-  glove_min: 222.39
-  glove_max: 282.66
-  range_delta: -60.27
+  glove_min: 240
+  glove_max: 300
+  range_delta: 60
   enabled: true
 - name: thumb_1
   glove_key: thumb_0
   source_sensor_index: 1
   motor_index: 1
-  glove_open: 244.26
-  glove_closed: 241.79
+  glove_open: 227.5
+  glove_closed: 247.5
   hand_open: 255
   hand_closed: 0
   invert: true
@@ -79,16 +79,16 @@ channels:
   match_delta: -7.63
   match_confidence: 1.375
   l10_joint_name: Thumb Adduction/Abduction
-  glove_min: 241.79
-  glove_max: 244.26
-  range_delta: -2.47
+  glove_min: 227.5
+  glove_max: 247.5
+  range_delta: 20
   enabled: true
 - name: index_0
   glove_key: index_1
   source_sensor_index: 13
   motor_index: 2
-  glove_open: 115.88
-  glove_closed: 103.62
+  glove_open: 127
+  glove_closed: 80
   hand_open: 255
   hand_closed: 0
   invert: false
@@ -96,16 +96,16 @@ channels:
   match_delta: 11.28
   match_confidence: 1.113
   l10_joint_name: Index Finger MCP Pitch
-  glove_min: 103.62
-  glove_max: 115.88
-  range_delta: -12.26
+  glove_min: 80
+  glove_max: 127
+  range_delta: -47
   enabled: true
 - name: middle_0
   glove_key: middle_1
   source_sensor_index: 7
   motor_index: 3
-  glove_open: 198.41
-  glove_closed: 182.17
+  glove_open: 215
+  glove_closed: 180
   hand_open: 255
   hand_closed: 0
   invert: false
@@ -113,16 +113,16 @@ channels:
   match_delta: 4.64
   match_confidence: 23.158
   l10_joint_name: Middle Finger MCP Pitch
-  glove_min: 182.17
-  glove_max: 198.41
-  range_delta: -16.24
+  glove_min: 180
+  glove_max: 215
+  range_delta: -35
   enabled: true
 - name: ring_0
   glove_key: ring_1
   source_sensor_index: 10
   motor_index: 4
-  glove_open: 284.71
-  glove_closed: 277.63
+  glove_open: 305
+  glove_closed: 267
   hand_open: 255
   hand_closed: 0
   invert: false
@@ -130,16 +130,16 @@ channels:
   match_delta: 2.31
   match_confidence: 4.891
   l10_joint_name: Ring Finger MCP Pitch
-  glove_min: 277.63
-  glove_max: 284.71
-  range_delta: -7.08
+  glove_min: 267
+  glove_max: 305
+  range_delta: -38
   enabled: true
 - name: pinky_0
   glove_key: pinky_1
   source_sensor_index: 4
   motor_index: 5
-  glove_open: 212.31
-  glove_closed: 206.76
+  glove_open: 215
+  glove_closed: 187
   hand_open: 255
   hand_closed: 0
   invert: false
@@ -147,16 +147,16 @@ channels:
   match_delta: 9.0
   match_confidence: 1.853
   l10_joint_name: Pinky Finger MCP Pitch
-  glove_min: 206.76
-  glove_max: 212.31
-  range_delta: -5.55
+  glove_min: 187
+  glove_max: 215
+  range_delta: -28
   enabled: true
 - name: index_1
   glove_key: index_0
   source_sensor_index: 12
   motor_index: 6
-  glove_open: 267.72
-  glove_closed: 266.91
+  glove_open: 275
+  glove_closed: 267
   hand_open: 255
   hand_closed: 0
   invert: false
@@ -164,16 +164,16 @@ channels:
   match_delta: 5.3
   match_confidence: 1.128
   l10_joint_name: Index Finger Adduction/Abduction
-  glove_min: 266.91
-  glove_max: 267.72
-  range_delta: -0.81
+  glove_min: 267
+  glove_max: 275
+  range_delta: -8
   enabled: true
 - name: ring_1
   glove_key: ring_0
   source_sensor_index: 9
   motor_index: 7
-  glove_open: 53.7
-  glove_closed: 50.77
+  glove_open: 60.05
+  glove_closed: 54.3
   hand_open: 255
   hand_closed: 0
   invert: true
@@ -181,16 +181,16 @@ channels:
   match_delta: -0.2
   match_confidence: 1.215
   l10_joint_name: Ring Finger Adduction/Abduction
-  glove_min: 50.77
-  glove_max: 53.7
-  range_delta: -2.93
+  glove_min: 54.3
+  glove_max: 60.05
+  range_delta: -5.75
   enabled: true
 - name: pinky_1
   glove_key: pinky_0
   source_sensor_index: 3
   motor_index: 8
-  glove_open: 76.82
-  glove_closed: 75.21
+  glove_open: 85
+  glove_closed: 69
   hand_open: 255
   hand_closed: 0
   invert: true
@@ -198,16 +198,16 @@ channels:
   match_delta: 1.62
   match_confidence: 1.233
   l10_joint_name: Pinky Finger Adduction/Abduction
-  glove_min: 75.21
-  glove_max: 76.82
-  range_delta: -1.61
+  glove_min: 69
+  glove_max: 85
+  range_delta: -16
   enabled: true
 - name: thumb_2
   glove_key: thumb_1
   source_sensor_index: 0
   motor_index: 9
-  glove_open: 245.24
-  glove_closed: 275.97
+  glove_open: 245
+  glove_closed: 273
   hand_open: 255
   hand_closed: 0
   invert: false
@@ -216,9 +216,9 @@ channels:
   match_confidence: 1.449
   l10_joint_name: Thumb Rotation
   enabled: true
-  glove_min: 245.24
-  glove_max: 275.97
-  range_delta: 30.73
+  glove_min: 245
+  glove_max: 273
+  range_delta: 28
   fixed_value: null
 hand_output_mode: normalized_255
 normalized_hand_open: 255
