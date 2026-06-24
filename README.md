@@ -24,63 +24,111 @@ The current auto config is a tested baseline, not a final universal calibration.
 
 ## Hardware
 
-- Right EG/KTH5702 glove on USB serial, currently configured as `/dev/ttyUSB1`.
-- LinkerHand L10 left hand on SocketCAN, currently configured as `can0`.
+- Right EG/KTH5702 glove on USB serial. The checked-in auto config uses `/dev/ttyUSB0`, but a new computer may show `/dev/ttyUSB1` or another port.
+- LinkerHand L10 left hand on SocketCAN. The checked-in auto config uses `can0`.
 - USB-to-CAN adapter, powered L10, and a Linux laptop.
 
-Install system tools:
+These commands assume Ubuntu/Linux with SocketCAN.
+
+## New Computer Setup
+
+Run this once on a fresh computer.
+
+Install system packages:
 
 ```bash
 sudo apt update
-sudo apt install -y iproute2 can-utils ethtool
+sudo apt install -y git python3 python3-venv python3-pip iproute2 can-utils ethtool
 ```
 
-Install Python dependencies:
-
-```bash
-python3 -m pip install -r requirements.txt
-```
-
-## Quick Start
-
-Clone and enter the repo:
+Clone the repo:
 
 ```bash
 git clone https://github.com/notalexander30/linkerhand_eg_to_l10.git
 cd linkerhand_eg_to_l10
 ```
 
-Activate your Python environment if you use one:
+Create and activate a local Python environment:
 
 ```bash
-conda activate linkerhand-l10
+python3 -m venv .venv
+source .venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
+```
+
+Allow your user to read the USB glove serial port:
+
+```bash
+sudo usermod -aG dialout $USER
+newgrp dialout
+```
+
+If `newgrp dialout` does not refresh permissions, log out and log back in.
+
+Plug in the glove, USB-to-CAN adapter, and L10. Then find the glove serial port:
+
+```bash
+ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
+```
+
+Find the CAN interface:
+
+```bash
+ip -br link show type can
+bash find_can.sh
+```
+
+If the glove is not `/dev/ttyUSB0`, edit `glove_reader.port` in:
+
+```text
+config/l10_left_eg_glove_mapping.auto.yaml
+```
+
+If the CAN interface is not `can0`, either edit `can` in the YAML or pass `--can can1` when running commands.
+
+## Daily Quick Start
+
+Use this sequence after the computer has already been set up.
+
+```bash
+cd linkerhand_eg_to_l10
+source .venv/bin/activate
 ```
 
 Bring up CAN at 1 Mbps:
 
 ```bash
-sudo /usr/sbin/ip link set can0 up type can bitrate 1000000
+sudo ip link set can0 down
+sudo ip link set can0 up type can bitrate 1000000
+ip -details link show can0
 ```
 
-Check the L10:
+Check the L10 before moving it:
 
 ```bash
-python3 linkerhand_l10_sdk.py --can can0 --hand-type left state
+python linkerhand_l10_sdk.py --can can0 --hand-type left state
 ```
 
 Preview the YAML controller without moving the hand:
 
 ```bash
-python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --dry-run --print-glove --print-pose
+python control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --dry-run --print-glove --print-pose
 ```
 
-Run live:
+Run live after the dry run looks right:
 
 ```bash
-python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run
+python control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run
 ```
 
-Avoid `--print-glove` and `--print-pose` during normal live control because terminal printing can make motion less smooth.
+Avoid `--print-glove` and `--print-pose` during normal live control because terminal printing can make motion less smooth. Stop with `Ctrl+C`; the controller sends `safe_exit_pose` on shutdown.
+
+If your CAN interface is `can1` instead of `can0`, use:
+
+```bash
+python control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --can can1 --no-dry-run
+```
 
 ## Current Auto Config
 
@@ -94,7 +142,7 @@ Current important settings:
 
 ```yaml
 glove_reader:
-  port: /dev/ttyUSB1
+  port: /dev/ttyUSB0
   baud: 115200
 can: can0
 hand_output_mode: normalized_255
@@ -118,7 +166,7 @@ If the glove appears on a different serial port, edit the YAML. The YAML control
 ```yaml
 glove_reader:
   mode: serial
-  port: /dev/ttyUSB1
+  port: /dev/ttyUSB0
   baud: 115200
 ```
 
@@ -221,31 +269,31 @@ If motion is jittery while holding still, lower `one_euro_min_cutoff`. If quick 
 Auto-match glove sensors to L10 motors:
 
 ```bash
-python3 calibrate_l10_glove_mapping.py --glove-port /dev/ttyUSB1 --can can0 --no-dry-run
+python3 calibrate_l10_glove_mapping.py --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
 ```
 
 Update an existing auto YAML instead of writing a new one:
 
 ```bash
-python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB1 --can can0 --no-dry-run
+python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
 ```
 
 Recalibrate only selected motors:
 
 ```bash
-python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --motors 2 6 --glove-port /dev/ttyUSB1 --can can0 --no-dry-run
+python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --motors 2 6 --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
 ```
 
 Capture open/closed glove ranges without remapping sensors:
 
 ```bash
-python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB1
+python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0
 ```
 
 Capture only selected motors:
 
 ```bash
-python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB1 --motors 2 6
+python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motors 2 6
 ```
 
 Apply default motion-control fields to an older YAML:
@@ -267,19 +315,19 @@ python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto
 Read raw glove values:
 
 ```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB1 --raw
+python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw
 ```
 
 Preview direct bridge:
 
 ```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB1 --hand-can can0 --hand left
+python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left
 ```
 
 Send direct bridge output to the L10:
 
 ```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB1 --hand-can can0 --hand left --send
+python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
 ```
 
 The YAML controller is preferred for the current EG-to-L10 setup because it is easier to tune individual L10 motors.
@@ -288,8 +336,8 @@ The YAML controller is preferred for the current EG-to-L10 setup because it is e
 
 | Problem | Fix |
 | --- | --- |
-| `/dev/ttyUSB0` does not exist | Run `ls /dev/ttyUSB*`; the current setup often uses `/dev/ttyUSB1`. Edit `glove_reader.port` in the YAML. |
-| `Permission denied: /dev/ttyUSB1` | Run `sudo usermod -aG dialout $USER`, then log out/in or run `newgrp dialout`. |
+| `/dev/ttyUSB0` does not exist | Run `ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null`; use the port that appears and edit `glove_reader.port` in the YAML. |
+| `Permission denied: /dev/ttyUSB0` | Run `sudo usermod -aG dialout $USER`, then log out/in or run `newgrp dialout`. Use the actual glove port if it is different. |
 | Raw glove values do not print | Check glove USB cable, port name, and `baud: 115200`. |
 | `can0` does not appear | Check the USB-to-CAN adapter, then run `ip -br link show type can`. |
 | `Operation not permitted` | Use `sudo` for `ip link` commands. |
