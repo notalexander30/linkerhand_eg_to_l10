@@ -26,7 +26,8 @@ from typing import Any, Iterable, Iterator, Mapping, Optional
 REPO_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(REPO_ROOT))
 
-DEFAULT_CONFIG = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.yaml"
+DEFAULT_TEMPLATE_CONFIG = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.yaml"
+DEFAULT_CONFIG = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.auto.yaml"
 DEFAULT_CAN = "can0"
 L10_JOINT_NAMES = [
     "Thumb CMC Pitch",
@@ -59,6 +60,7 @@ SERIAL_SENSOR_KEYS = [
     "thumb_1",
     "thumb_2",
 ]
+SOURCE_SENSOR_INDEX_BY_KEY = {key: index for index, key in enumerate(SERIAL_SENSOR_KEYS)}
 
 
 @dataclass(frozen=True)
@@ -505,14 +507,134 @@ def print_pose(pose: Iterable[int]) -> None:
     print(f"pose {values}")
 
 
+def config_with_overrides(config: TeleopConfig, **overrides: Any) -> TeleopConfig:
+    """Return a copy of the loaded YAML config with CLI overrides applied."""
+
+    return TeleopConfig(**{**config.__dict__, **overrides})
+
+
+def runtime_glove_settings(config: TeleopConfig, args: argparse.Namespace) -> dict[str, Any]:
+    """Merge YAML glove_reader settings with common runtime serial overrides."""
+
+    settings = dict(config.glove_reader)
+    if args.glove_port is not None:
+        settings["port"] = args.glove_port
+    if args.baud is not None:
+        settings["baud"] = int(args.baud)
+    return settings
+
+
+def motor_set_from_config(raw_value: Any) -> set[int] | None:
+    """Parse startup_calibration.motors from YAML."""
+
+    if raw_value in (None, "all"):
+        return None
+    if isinstance(raw_value, str):
+        return {int(value.strip()) for value in raw_value.split(",") if value.strip()}
+    return {int(value) for value in raw_value}
+
+
+def run_startup_range_calibration(args: argparse.Namespace) -> bool:
+    """Optionally update glove_open/glove_closed in the active YAML before teleop."""
+
+    from glove_range_calibration import (
+        collect_samples,
+        load_yaml,
+        median_values,
+        save_yaml,
+        select_channels,
+        update_glove_reader_settings,
+        update_ranges,
+        wait_for_enter,
+    )
+
+    data = load_yaml(args.config)
+    startup_settings = dict(data.get("startup_calibration", {}) or {})
+    if args.no_startup_calibration:
+        if args.calibrate_ranges or args.calibrate_only:
+            raise SystemExit("Choose either startup calibration or --no-startup-calibration, not both.")
+        return False
+
+    enabled = args.calibrate_ranges or args.calibrate_only or bool(startup_settings.get("enabled", False))
+    if not enabled:
+        return False
+
+    samples = int(
+        args.calibrate_samples
+        if args.calibrate_samples is not None
+        else startup_settings.get("samples", 45)
+    )
+    if samples < 1:
+        raise SystemExit("startup calibration samples must be at least 1.")
+
+    settle = float(
+        args.calibrate_settle
+        if args.calibrate_settle is not None
+        else startup_settings.get("settle", 0.5)
+    )
+    min_delta = float(
+        args.calibrate_min_delta
+        if args.calibrate_min_delta is not None
+        else startup_settings.get("min_delta", 3.0)
+    )
+    motors = (
+        set(args.calibrate_motors)
+        if args.calibrate_motors is not None
+        else motor_set_from_config(startup_settings.get("motors"))
+    )
+    include_disabled = args.calibrate_include_disabled or bool(startup_settings.get("include_disabled", False))
+    non_interactive = args.non_interactive_calibration or bool(startup_settings.get("non_interactive", False))
+
+    settings = update_glove_reader_settings(data, port=args.glove_port, baud=args.baud)
+    channels = select_channels(data, motors, include_disabled)
+    keys = sorted({str(channel["glove_key"]) for channel in channels})
+    selected_motors = sorted(int(channel["motor_index"]) for channel in channels)
+
+    print(f"Startup glove-fit calibration: updating {args.config}")
+    print(f"Selected L10 motors: {selected_motors}")
+    reader = GloveReader(mock=args.mock_glove, settings=settings)
+    frame_iter = reader.frames()
+
+    wait_for_enter("\nOpen your RIGHT glove hand fully and hold it still.", skip=non_interactive)
+    time.sleep(max(0.0, settle))
+    open_samples = collect_samples(frame_iter, keys, samples)
+
+    wait_for_enter("\nClose/flex the selected fingers to their maximum useful pose and hold still.", skip=non_interactive)
+    time.sleep(max(0.0, settle))
+    closed_samples = collect_samples(frame_iter, keys, samples)
+
+    updated_motors = update_ranges(
+        data,
+        channels,
+        median_values(open_samples),
+        median_values(closed_samples),
+        source_sensor_index_by_key=SOURCE_SENSOR_INDEX_BY_KEY,
+        min_delta=min_delta,
+        note="startup glove-fit calibration updated open/closed ranges",
+    )
+    metadata = dict(data.get("metadata", {}))
+    metadata["last_startup_range_calibration"] = time.strftime("%Y-%m-%d %H:%M:%S")
+    metadata["startup_range_calibration_updated_motors"] = sorted(updated_motors)
+    data["metadata"] = metadata
+    save_yaml(args.config, data)
+    print("Reloading updated calibration before teleoperation.")
+    return True
+
+
 def run(args: argparse.Namespace) -> None:
     """Main loop: read glove, map to pose, smooth/limit it, then dry-run or send."""
 
+    did_calibrate = run_startup_range_calibration(args)
+    if args.calibrate_only:
+        if not did_calibrate:
+            print("No startup calibration was enabled.")
+        return
+
     config = load_config(args.config)
     if args.hz is not None:
-        config = TeleopConfig(**{**config.__dict__, "control_hz": float(args.hz)})
+        config = config_with_overrides(config, control_hz=float(args.hz))
     if args.can is not None:
-        config = TeleopConfig(**{**config.__dict__, "can": str(args.can)})
+        config = config_with_overrides(config, can=str(args.can))
 
     dry_run = config.dry_run
     if args.dry_run:
@@ -525,7 +647,7 @@ def run(args: argparse.Namespace) -> None:
     if config.hand_type != "left":
         raise SystemExit(f"Expected hand_type left, got {config.hand_type}")
 
-    reader = GloveReader(mock=args.mock_glove, settings=config.glove_reader)
+    reader = GloveReader(mock=args.mock_glove, settings=runtime_glove_settings(config, args))
     interval = 1.0 / max(config.control_hz, 1.0)
     warned_missing: set[str] = set()
     previous_pose: Optional[list[int]] = open_pose_from_config(config)
@@ -590,6 +712,29 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--mock-glove", action="store_true", help="Use generated glove values for debugging.")
     parser.add_argument("--hz", type=float, default=None, help="Override control_hz from config.")
     parser.add_argument("--can", default=None, help="Override SocketCAN channel from config, for example can0.")
+    parser.add_argument("--glove-port", default=None, help="Override glove_reader.port from config.")
+    parser.add_argument("--baud", type=int, default=None, help="Override glove_reader.baud from config.")
+    parser.add_argument(
+        "--calibrate-ranges",
+        action="store_true",
+        help="Before teleop, update glove_open/glove_closed in the active YAML from open/closed glove poses.",
+    )
+    parser.add_argument(
+        "--calibrate-only",
+        action="store_true",
+        help="Run startup range calibration, update the YAML, and exit before teleop.",
+    )
+    parser.add_argument(
+        "--no-startup-calibration",
+        action="store_true",
+        help="Skip startup_calibration.enabled from YAML for this run.",
+    )
+    parser.add_argument("--calibrate-samples", type=int, default=None, help="Samples per open/closed startup calibration pose.")
+    parser.add_argument("--calibrate-settle", type=float, default=None, help="Seconds to wait before each startup calibration sample.")
+    parser.add_argument("--calibrate-min-delta", type=float, default=None, help="Warn when a captured range is smaller than this.")
+    parser.add_argument("--calibrate-motors", nargs="+", type=int, default=None, help="Only startup-calibrate these L10 motor indexes.")
+    parser.add_argument("--calibrate-include-disabled", action="store_true", help="Also range-calibrate disabled YAML channels.")
+    parser.add_argument("--non-interactive-calibration", action="store_true", help="Skip Enter prompts during startup calibration.")
     return parser
 
 

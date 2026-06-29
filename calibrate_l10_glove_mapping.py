@@ -29,7 +29,7 @@ sys.path.insert(0, str(REPO_ROOT))
 
 from control_l10_left_from_eg_glove import (  # noqa: E402
     DEFAULT_CAN,
-    DEFAULT_CONFIG,
+    DEFAULT_TEMPLATE_CONFIG,
     L10_JOINT_NAMES,
     SERIAL_SENSOR_KEYS,
     GloveReader,
@@ -40,6 +40,7 @@ from control_l10_left_from_eg_glove import (  # noqa: E402
 )
 
 
+DEFAULT_CONFIG = DEFAULT_TEMPLATE_CONFIG
 DEFAULT_OUTPUT = REPO_ROOT / "config" / "l10_left_eg_glove_mapping.auto.yaml"
 ALL_255_OPEN_POSE = [255] * 10
 

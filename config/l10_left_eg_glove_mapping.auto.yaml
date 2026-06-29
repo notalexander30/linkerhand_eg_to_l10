@@ -21,6 +21,13 @@ glove_reader:
   mode: serial
   port: /dev/ttyUSB0
   baud: 115200
+startup_calibration:
+  enabled: false
+  samples: 45
+  settle: 0.5
+  min_delta: 3.0
+  motors: null
+  include_disabled: false
 metadata:
   generated_by: calibrate_l10_glove_mapping.py
   open_pose_command: all-255
@@ -51,7 +58,7 @@ metadata:
 channels:
 - name: thumb_0
   glove_key: thumb_2
-  source_sensor_index: 2
+  source_sensor_index: 14
   motor_index: 0
   glove_open: 240
   glove_closed: 300
@@ -68,7 +75,7 @@ channels:
   enabled: true
 - name: thumb_1
   glove_key: thumb_0
-  source_sensor_index: 1
+  source_sensor_index: 12
   motor_index: 1
   glove_open: 247.5
   glove_closed: 227.5
@@ -85,7 +92,7 @@ channels:
   enabled: true
 - name: index_0
   glove_key: index_1
-  source_sensor_index: 13
+  source_sensor_index: 10
   motor_index: 2
   glove_open: 127
   glove_closed: 80
@@ -119,7 +126,7 @@ channels:
   enabled: true
 - name: ring_0
   glove_key: ring_1
-  source_sensor_index: 10
+  source_sensor_index: 4
   motor_index: 4
   glove_open: 305
   glove_closed: 267
@@ -136,7 +143,7 @@ channels:
   enabled: true
 - name: pinky_0
   glove_key: pinky_1
-  source_sensor_index: 4
+  source_sensor_index: 1
   motor_index: 5
   glove_open: 215
   glove_closed: 187
@@ -153,7 +160,7 @@ channels:
   enabled: true
 - name: index_1
   glove_key: index_0
-  source_sensor_index: 12
+  source_sensor_index: 9
   motor_index: 6
   glove_open: 275
   glove_closed: 267
@@ -170,7 +177,7 @@ channels:
   enabled: true
 - name: ring_1
   glove_key: ring_0
-  source_sensor_index: 9
+  source_sensor_index: 3
   motor_index: 7
   glove_open: 60.05
   glove_closed: 54.3
@@ -187,7 +194,7 @@ channels:
   enabled: true
 - name: pinky_1
   glove_key: pinky_0
-  source_sensor_index: 3
+  source_sensor_index: 0
   motor_index: 8
   glove_open: 85
   glove_closed: 69
@@ -204,7 +211,7 @@ channels:
   enabled: true
 - name: thumb_2
   glove_key: thumb_1
-  source_sensor_index: 0
+  source_sensor_index: 13
   motor_index: 9
   glove_open: 245
   glove_closed: 273

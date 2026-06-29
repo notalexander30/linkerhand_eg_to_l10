@@ -9,10 +9,10 @@ right EG glove -> USB serial -> laptop -> SocketCAN can0 -> left LinkerHand L10
 The main workflow is the YAML controller:
 
 ```bash
-python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run
+python3 control_l10_left_from_eg_glove.py --no-dry-run
 ```
 
-The current auto config is a tested baseline, not a final universal calibration. The EG glove has 15 DOF and the L10 has 10 DOF, so some channels are matched and some are ignored. Expect to keep tuning `glove_open`, `glove_closed`, `invert`, and `gain` for better movement.
+The default controller config is `config/l10_left_eg_glove_mapping.auto.yaml`. It is a tested baseline, not a final universal calibration. If the glove is worn differently, run startup range calibration so the controller updates `glove_open` and `glove_closed` in that YAML before teleoperation starts.
 
 ## Safety
 
@@ -113,13 +113,25 @@ python linkerhand_l10_sdk.py --can can0 --hand-type left state
 Preview the YAML controller without moving the hand:
 
 ```bash
-python control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --dry-run --print-glove --print-pose
+python control_l10_left_from_eg_glove.py --dry-run --print-glove --print-pose
+```
+
+If the glove fit changed, re-capture the open/closed ranges in the active auto YAML:
+
+```bash
+python control_l10_left_from_eg_glove.py --calibrate-ranges --calibrate-only
+```
+
+Or calibrate and immediately continue into dry-run preview:
+
+```bash
+python control_l10_left_from_eg_glove.py --calibrate-ranges --dry-run --print-pose
 ```
 
 Run live after the dry run looks right:
 
 ```bash
-python control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --no-dry-run
+python control_l10_left_from_eg_glove.py --no-dry-run
 ```
 
 Avoid `--print-glove` and `--print-pose` during normal live control because terminal printing can make motion less smooth. Stop with `Ctrl+C`; the controller sends `safe_exit_pose` on shutdown.
@@ -127,7 +139,7 @@ Avoid `--print-glove` and `--print-pose` during normal live control because term
 If your CAN interface is `can1` instead of `can0`, use:
 
 ```bash
-python control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --can can1 --no-dry-run
+python control_l10_left_from_eg_glove.py --can can1 --no-dry-run
 ```
 
 ## Current Auto Config
@@ -148,6 +160,8 @@ can: can0
 hand_output_mode: normalized_255
 motion_profile: responsive_1to1
 smoothing_mode: one_euro
+startup_calibration:
+  enabled: false
 ```
 
 Thumb rotation is enabled in the current auto config:
@@ -161,7 +175,7 @@ Thumb rotation is enabled in the current auto config:
   fixed_value: null
 ```
 
-If the glove appears on a different serial port, edit the YAML. The YAML controller does not currently have a `--glove-port` override.
+If the glove appears on a different serial port, edit the YAML or pass `--glove-port` at runtime.
 
 ```yaml
 glove_reader:
@@ -170,10 +184,10 @@ glove_reader:
   baud: 115200
 ```
 
-The CAN interface can be overridden at runtime:
+The CAN interface and glove serial port can be overridden at runtime:
 
 ```bash
-python3 control_l10_left_from_eg_glove.py --config config/l10_left_eg_glove_mapping.auto.yaml --can can1 --no-dry-run
+python3 control_l10_left_from_eg_glove.py --can can1 --glove-port /dev/ttyUSB1 --no-dry-run
 ```
 
 ## Mapping Basics
@@ -217,7 +231,7 @@ In each YAML channel:
 
 ```yaml
 glove_key: index_1      # which glove sensor controls this motor
-source_sensor_index: 13 # note/debug value for the raw sensor index
+source_sensor_index: 10 # note/debug value for the raw sensor index
 motor_index: 2          # which L10 motor moves
 ```
 
@@ -266,7 +280,20 @@ If motion is jittery while holding still, lower `one_euro_min_cutoff`. If quick 
 
 ## Calibration Tools
 
-Auto-match glove sensors to L10 motors:
+Quick glove-fit calibration updates only `glove_open` and `glove_closed` in the active YAML. Use this when teleoperation feels inaccurate because the glove was worn differently:
+
+```bash
+python3 control_l10_left_from_eg_glove.py --calibrate-ranges --calibrate-only
+```
+
+To make startup calibration happen every run, set this in `config/l10_left_eg_glove_mapping.auto.yaml`:
+
+```yaml
+startup_calibration:
+  enabled: true
+```
+
+Auto-match glove sensors to L10 motors when the channel mapping itself is wrong:
 
 ```bash
 python3 calibrate_l10_glove_mapping.py --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
