@@ -12,7 +12,7 @@ dry_run: true
 hand_output_mode: normalized_255
 # normalized_hand_open/closed: full-range set-state values used in normalized_255 mode.
 normalized_hand_open: 255
-normalized_hand_closed: 255
+normalized_hand_closed: 0
 # send_interval_sec: 0.0 sends every control loop for fastest live teleoperation.
 # Use 1.0 only for slow set-state snapshot tests.
 send_interval_sec: 0.0
@@ -57,7 +57,7 @@ glove_reader:
 # To manually change a motor, edit both glove_key and source_sensor_index using
 # the table above. Leave motor_index and l10_joint_name alone.
 #
-# hand_open and hand_closed are both set to 255 to hold every channel at 255.
+# hand_open is 255 and hand_closed is 0 so each calibrated channel can move.
 channels:
   - name: thumb_cmc_pitch
     glove_key: thumb_1
@@ -67,7 +67,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: true
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -79,7 +79,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -91,7 +91,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -103,7 +103,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -115,7 +115,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -127,7 +127,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -139,7 +139,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -151,7 +151,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -163,7 +163,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -177,7 +177,7 @@ channels:
     glove_open: 0
     glove_closed: 1000
     hand_open: 255
-    hand_closed: 255
+    hand_closed: 0
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0

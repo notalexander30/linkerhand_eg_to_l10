@@ -63,7 +63,7 @@ channels:
   glove_open: 240
   glove_closed: 300
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: true
   gain: 1.0
   match_delta: 1.25
@@ -80,7 +80,7 @@ channels:
   glove_open: 247.5
   glove_closed: 227.5
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: true
   gain: 1.0
   match_delta: -7.63
@@ -97,7 +97,7 @@ channels:
   glove_open: 127
   glove_closed: 80
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: false
   gain: 1.0
   match_delta: 11.28
@@ -114,7 +114,7 @@ channels:
   glove_open: 215
   glove_closed: 180
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: false
   gain: 1.0
   match_delta: 4.64
@@ -131,7 +131,7 @@ channels:
   glove_open: 305
   glove_closed: 267
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: false
   gain: 1.0
   match_delta: 2.31
@@ -148,7 +148,7 @@ channels:
   glove_open: 215
   glove_closed: 187
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: false
   gain: 1.0
   match_delta: 9.0
@@ -165,7 +165,7 @@ channels:
   glove_open: 275
   glove_closed: 267
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: false
   gain: 1.0
   match_delta: 5.3
@@ -182,7 +182,7 @@ channels:
   glove_open: 60.05
   glove_closed: 54.3
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: true
   gain: 1.0
   match_delta: -0.2
@@ -199,7 +199,7 @@ channels:
   glove_open: 85
   glove_closed: 69
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: true
   gain: 1.0
   match_delta: 1.62
@@ -216,7 +216,7 @@ channels:
   glove_open: 245
   glove_closed: 273
   hand_open: 255
-  hand_closed: 255
+  hand_closed: 0
   invert: false
   gain: 1.0
   match_delta: 2.0
@@ -229,7 +229,7 @@ channels:
   fixed_value: null
 hand_output_mode: normalized_255
 normalized_hand_open: 255
-normalized_hand_closed: 255
+normalized_hand_closed: 0
 send_interval_sec: 0.0
 motion_profile: responsive_1to1
 smoothing_mode: one_euro
