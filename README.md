@@ -12,7 +12,7 @@ The main workflow is the YAML controller:
 python3 control_l10_left_from_eg_glove.py --no-dry-run
 ```
 
-The default controller config is `config/l10_left_eg_glove_mapping.auto.yaml`. It is a tested baseline, not a final universal calibration. If the glove is worn differently, run startup range calibration so the controller updates `glove_open` and `glove_closed` in that YAML before teleoperation starts.
+The default controller config is `config/l10_left_eg_glove_mapping.auto.yaml`. The repo is intentionally focused on this single controller workflow. If the glove is worn differently, run startup range calibration so the controller updates `glove_open` and `glove_closed` in that YAML before teleoperation starts.
 
 ## Safety
 
@@ -104,12 +104,6 @@ sudo ip link set can0 up type can bitrate 1000000
 ip -details link show can0
 ```
 
-Check the L10 before moving it:
-
-```bash
-python linkerhand_l10_sdk.py --can can0 --hand-type left state
-```
-
 Preview the YAML controller without moving the hand:
 
 ```bash
@@ -160,20 +154,23 @@ can: can0
 hand_output_mode: calibrated
 motion_profile: responsive_1to1
 smoothing_mode: one_euro
+safe_exit_pose: [255, 0, 255, 255, 255, 255, 255, 255, 255, 255]
 startup_calibration:
   enabled: false
 ```
 
-Thumb rotation is enabled in the current auto config:
+The current open pose is all `255` except motor index `1`, Thumb Adduction/Abduction, which opens at `0`:
 
 ```yaml
-- name: thumb_2
-  glove_key: thumb_1
-  motor_index: 9
-  l10_joint_name: Thumb Rotation
-  enabled: true
-  fixed_value: null
+- name: thumb_1
+  motor_index: 1
+  l10_joint_name: Thumb Adduction/Abduction
+  hand_open: 0
+  hand_closed: 255
+  invert: false
 ```
+
+Thumb CMC Pitch is reversed in the YAML by using `hand_open: 0`, `hand_closed: 255`, and `invert: true` on motor index `0`.
 
 If the glove appears on a different serial port, edit the YAML or pass `--glove-port` at runtime.
 
@@ -293,71 +290,7 @@ startup_calibration:
   enabled: true
 ```
 
-Auto-match glove sensors to L10 motors when the channel mapping itself is wrong:
-
-```bash
-python3 calibrate_l10_glove_mapping.py --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
-```
-
-Update an existing auto YAML instead of writing a new one:
-
-```bash
-python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
-```
-
-Recalibrate only selected motors:
-
-```bash
-python3 calibrate_l10_glove_mapping.py --update-config config/l10_left_eg_glove_mapping.auto.yaml --motors 2 6 --glove-port /dev/ttyUSB0 --can can0 --no-dry-run
-```
-
-Capture open/closed glove ranges without remapping sensors:
-
-```bash
-python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0
-```
-
-Capture only selected motors:
-
-```bash
-python3 capture_glove_ranges.py --config config/l10_left_eg_glove_mapping.auto.yaml --glove-port /dev/ttyUSB0 --motors 2 6
-```
-
-Apply default motion-control fields to an older YAML:
-
-```bash
-python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml
-```
-
-Disable thumb rotation if needed:
-
-```bash
-python3 update_motion_controls.py --config config/l10_left_eg_glove_mapping.auto.yaml --disable-thumb-rotation
-```
-
-## Older Direct Bridge
-
-`glove_to_l10.py` is still available for raw serial inspection and simple direct mapping.
-
-Read raw glove values:
-
-```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --raw
-```
-
-Preview direct bridge:
-
-```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left
-```
-
-Send direct bridge output to the L10:
-
-```bash
-python3 glove_to_l10.py --glove-port /dev/ttyUSB0 --hand-can can0 --hand left --send
-```
-
-The YAML controller is preferred for the current EG-to-L10 setup because it is easier to tune individual L10 motors.
+If a sensor is mapped to the wrong motor, edit `glove_key` and `source_sensor_index` directly in `config/l10_left_eg_glove_mapping.auto.yaml`, then dry-run before live control.
 
 ## Troubleshooting
 
@@ -371,7 +304,7 @@ The YAML controller is preferred for the current EG-to-L10 setup because it is e
 | `Object "set" is unknown` | Use `sudo ip link set can0 down`, not `sudo ip set can0 down`. |
 | `RTNETLINK answers: Device or resource busy` | Stop Python/ROS/CAN tools using the hand, then run `sudo ip link set can0 down`. |
 | `can0 interface is not open` | Run the CAN down/configure/up commands again. |
-| SDK does not detect the hand | Check hand power, CAN wiring, bitrate, and `python3 linkerhand_l10_sdk.py --can can0 --hand-type left state`. |
+| SDK does not detect the hand | Check hand power, CAN wiring, bitrate, then run a controller dry-run before live control. |
 | Hand moves unexpectedly | Press `Ctrl+C`, preview with `--dry-run`, then check `glove_key`, `invert`, `gain`, and motor order. |
 | Thumb rotation does not move | In the motor `9` channel, set `enabled: true` and `fixed_value: null`. |
 

@@ -41,8 +41,8 @@ motor_count: 10
 safe_exit_pose: [255, 0, 255, 255, 255, 255, 255, 255, 255, 255]
 
 glove_reader:
-  # The existing repo has serial parsing in glove_to_l10.py for KTH5702 text
-  # lines. Future modes can be added in GloveReader for UDP, ROS, or vendor SDKs.
+  # eg_glove_serial.py parses KTH5702 serial text lines.
+  # Future modes can be added in GloveReader for UDP, ROS, or vendor SDKs.
   mode: serial
   port: /dev/ttyUSB0
   baud: 115200

@@ -29,7 +29,7 @@ startup_calibration:
   motors: null
   include_disabled: false
 metadata:
-  generated_by: calibrate_l10_glove_mapping.py
+  generated_by: control_l10_left_from_eg_glove.py
   open_pose_command: all-255
   samples_per_step: 35
   allow_duplicate_sensors: false

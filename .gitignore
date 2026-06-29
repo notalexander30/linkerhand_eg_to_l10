@@ -4,4 +4,3 @@ __pycache__/
 .venv/
 venv/
 .env
-glove_l10_calibration.json

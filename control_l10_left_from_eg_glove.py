@@ -265,12 +265,12 @@ class GloveReader:
                 yield {key: flex * 1000.0 for key in keys}
 
     def _serial_frames(self) -> Iterator[dict[str, float]]:
-        """Use the existing KTH5702 serial parser from glove_to_l10.py for the real glove."""
+        """Use the KTH5702 serial parser for the real glove."""
 
         try:
-            from glove_to_l10 import glove_frames
+            from eg_glove_serial import glove_frames
         except ImportError as exc:
-            raise SystemExit("Could not import existing serial glove reader from glove_to_l10.py") from exc
+            raise SystemExit("Could not import the EG glove serial reader.") from exc
 
         port = str(self.settings.get("port", "/dev/ttyUSB0"))
         baud = int(self.settings.get("baud", 115200))

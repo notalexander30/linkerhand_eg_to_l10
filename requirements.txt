@@ -4,4 +4,3 @@ pyserial
 PyYAML
 numpy
 tabulate
-PyQt5
