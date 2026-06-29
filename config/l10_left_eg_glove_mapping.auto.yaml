@@ -8,7 +8,7 @@ max_delta_per_cycle: 6
 motor_count: 10
 safe_exit_pose:
 - 255
-- 255
+- 0
 - 255
 - 255
 - 255
@@ -62,8 +62,8 @@ channels:
   motor_index: 0
   glove_open: 240
   glove_closed: 300
-  hand_open: 255
-  hand_closed: 0
+  hand_open: 0
+  hand_closed: 255
   invert: true
   gain: 1.0
   match_delta: 1.25
@@ -79,9 +79,9 @@ channels:
   motor_index: 1
   glove_open: 247.5
   glove_closed: 227.5
-  hand_open: 255
-  hand_closed: 0
-  invert: true
+  hand_open: 0
+  hand_closed: 255
+  invert: false
   gain: 1.0
   match_delta: -7.63
   match_confidence: 1.375
@@ -181,8 +181,8 @@ channels:
   motor_index: 7
   glove_open: 60.05
   glove_closed: 54.3
-  hand_open: 255
-  hand_closed: 0
+  hand_open: 0
+  hand_closed: 255
   invert: true
   gain: 1.0
   match_delta: -0.2
@@ -198,8 +198,8 @@ channels:
   motor_index: 8
   glove_open: 85
   glove_closed: 69
-  hand_open: 255
-  hand_closed: 0
+  hand_open: 0
+  hand_closed: 255
   invert: true
   gain: 1.0
   match_delta: 1.62
@@ -227,7 +227,7 @@ channels:
   glove_max: 273
   range_delta: 28
   fixed_value: null
-hand_output_mode: normalized_255
+hand_output_mode: calibrated
 normalized_hand_open: 255
 normalized_hand_closed: 0
 send_interval_sec: 0.0

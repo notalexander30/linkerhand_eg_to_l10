@@ -157,7 +157,7 @@ glove_reader:
   port: /dev/ttyUSB0
   baud: 115200
 can: can0
-hand_output_mode: normalized_255
+hand_output_mode: calibrated
 motion_profile: responsive_1to1
 smoothing_mode: one_euro
 startup_calibration:

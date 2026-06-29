@@ -7,9 +7,9 @@ can: can0
 control_hz: 60
 # dry_run: true prints poses only; use --no-dry-run to move the hand.
 dry_run: true
-# hand_output_mode: normalized_255 maps every calibrated glove open/close pair to the normalized range below.
+# hand_output_mode: calibrated uses each channel's hand_open and hand_closed values.
 # Use "calibrated" if you want each channel's hand_open and hand_closed values instead.
-hand_output_mode: normalized_255
+hand_output_mode: calibrated
 # normalized_hand_open/closed: full-range set-state values used in normalized_255 mode.
 normalized_hand_open: 255
 normalized_hand_closed: 0
@@ -38,7 +38,7 @@ motor_count: 10
 
 # Used on Ctrl+C in live mode. This is the left-hand "Open Hand" pose from
 # LinkerHand/config/L10_positions.yaml.
-safe_exit_pose: [255, 255, 255, 255, 255, 255, 255, 255, 255, 255]
+safe_exit_pose: [255, 0, 255, 255, 255, 255, 255, 255, 255, 255]
 
 glove_reader:
   # The existing repo has serial parsing in glove_to_l10.py for KTH5702 text
@@ -57,7 +57,7 @@ glove_reader:
 # To manually change a motor, edit both glove_key and source_sensor_index using
 # the table above. Leave motor_index and l10_joint_name alone.
 #
-# hand_open is 255 and hand_closed is 0 so each calibrated channel can move.
+# The effective open pose is [255, 0, 255, 255, 255, 255, 255, 255, 255, 255].
 channels:
   - name: thumb_cmc_pitch
     glove_key: thumb_1
@@ -66,8 +66,8 @@ channels:
     motor_index: 0
     glove_open: 0
     glove_closed: 1000
-    hand_open: 255
-    hand_closed: 0
+    hand_open: 0
+    hand_closed: 255
     invert: true
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0
@@ -78,8 +78,8 @@ channels:
     motor_index: 1
     glove_open: 0
     glove_closed: 1000
-    hand_open: 255
-    hand_closed: 0
+    hand_open: 0
+    hand_closed: 255
     invert: false
     # gain: master-to-slave movement multiplier. Raise if this motor moves too little.
     gain: 1.0

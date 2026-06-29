@@ -301,6 +301,15 @@ def fixed_value_for_channel(channel: ChannelMapping, config: TeleopConfig) -> in
     return clamp_int(hand_open)
 
 
+def effective_open_value_for_channel(channel: ChannelMapping, config: TeleopConfig) -> int:
+    """Return the motor value produced when the glove is at this channel's open reading."""
+
+    if not channel.enabled:
+        return fixed_value_for_channel(channel, config)
+    hand_open, hand_closed = hand_range_for_channel(channel, config)
+    return clamp_int(hand_closed if channel.invert else hand_open)
+
+
 def map_channel(value: float, channel: ChannelMapping, config: TeleopConfig) -> int:
     """Convert one raw glove value into one L10 motor value using calibration plus gain."""
 
@@ -318,12 +327,11 @@ def map_channel(value: float, channel: ChannelMapping, config: TeleopConfig) -> 
 
 
 def open_pose_from_config(config: TeleopConfig) -> list[int]:
-    """Build the open-hand pose from each channel's hand_open value."""
+    """Build the open-hand pose each channel produces at its calibrated glove_open value."""
 
     pose = [255] * config.motor_count
     for channel in config.channels:
-        hand_open, _hand_closed = hand_range_for_channel(channel, config)
-        pose[channel.motor_index] = clamp_int(hand_open)
+        pose[channel.motor_index] = effective_open_value_for_channel(channel, config)
     return pose
 
 
@@ -343,7 +351,7 @@ def map_glove_to_pose(
             if channel.glove_key not in warned_missing:
                 print(
                     f"Warning: missing glove key '{channel.glove_key}' for "
-                    f"{channel.l10_joint_name}. Using hand_open={channel.hand_open}.",
+                    f"{channel.l10_joint_name}. Using its configured open value.",
                     file=sys.stderr,
                 )
                 warned_missing.add(channel.glove_key)
